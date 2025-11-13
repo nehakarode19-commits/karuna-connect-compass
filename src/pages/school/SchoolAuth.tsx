@@ -7,6 +7,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { GraduationCap, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { z } from "zod";
+
+const authSchema = z.object({
+  email: z.string().trim().email({ message: "Invalid email address" }).max(255, { message: "Email too long" }),
+  fullName: z.string().trim().min(2, { message: "Name must be at least 2 characters" }).max(100, { message: "Name too long" }).optional(),
+  password: z.string().min(8, { message: "Password must be at least 8 characters" }).max(100, { message: "Password too long" })
+});
 
 const SchoolAuth = () => {
   const navigate = useNavigate();
@@ -26,8 +33,15 @@ const SchoolAuth = () => {
     setLoading(true);
 
     try {
+      // Validate input
+      const validationData = isSignUp 
+        ? { email: formData.email, fullName: formData.fullName, password: formData.password }
+        : { email: formData.email, password: formData.password };
+      
+      const validated = authSchema.parse(validationData);
+      
       if (isSignUp) {
-        const { error } = await signUp(formData.email, formData.password, formData.fullName);
+        const { error } = await signUp(validated.email, validated.password, validated.fullName || "");
         if (error) throw error;
         
         toast({
@@ -36,7 +50,7 @@ const SchoolAuth = () => {
         });
         navigate("/school/onboarding");
       } else {
-        const { error } = await signIn(formData.email, formData.password);
+        const { error } = await signIn(validated.email, validated.password);
         if (error) throw error;
         
         toast({
@@ -46,11 +60,19 @@ const SchoolAuth = () => {
         navigate("/school/dashboard");
       }
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "An error occurred. Please try again.",
-        variant: "destructive",
-      });
+      if (error instanceof z.ZodError) {
+        toast({
+          title: "Validation Error",
+          description: error.errors[0].message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "An error occurred. Please try again.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }
