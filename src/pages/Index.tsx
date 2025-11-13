@@ -67,8 +67,8 @@ const Index = () => {
               </div>
               <span className="text-xl font-bold text-foreground">Karuna Platform</span>
             </div>
-            <Button onClick={() => navigate("/login")} className="bg-gradient-hero border-0">
-              Login <ArrowRight className="w-4 h-4 ml-2" />
+            <Button onClick={() => navigate("/school/auth")} className="bg-gradient-hero border-0">
+              School Login <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>
         </div>
@@ -94,18 +94,19 @@ const Index = () => {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
                 size="lg" 
-                onClick={() => navigate("/dashboard")}
+                onClick={() => navigate("/school/dashboard")}
                 className="bg-gradient-hero border-0 shadow-medium hover:shadow-strong transition-all"
               >
-                Explore Dashboard
+                School Portal
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
               <Button 
                 size="lg" 
                 variant="outline"
                 className="border-2"
+                onClick={() => navigate("/admin/dashboard")}
               >
-                Learn More
+                Admin Portal
               </Button>
             </div>
           </div>
@@ -168,14 +169,24 @@ const Index = () => {
               Join 2,500+ schools already transforming education through our platform
             </p>
             <div className="space-y-4">
-              <Button 
-                size="lg" 
-                onClick={() => navigate("/login")}
-                className="bg-background text-foreground hover:bg-background/90 shadow-strong"
-              >
-                Access Platform
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </Button>
+              <div className="flex gap-4 justify-center">
+                <Button 
+                  size="lg" 
+                  onClick={() => navigate("/school/auth")}
+                  className="bg-background text-foreground hover:bg-background/90 shadow-strong"
+                >
+                  School Login
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </Button>
+                <Button 
+                  size="lg" 
+                  onClick={() => navigate("/admin/dashboard")}
+                  variant="outline"
+                  className="border-2 border-background text-background bg-transparent hover:bg-background/10"
+                >
+                  Admin Portal
+                </Button>
+              </div>
               <div className="flex items-center justify-center gap-6 text-primary-foreground/90 text-sm">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4" />
