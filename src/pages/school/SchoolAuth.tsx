@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { GraduationCap, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 
 const authSchema = z.object({
@@ -53,11 +54,29 @@ const SchoolAuth = () => {
         const { error } = await signIn(validated.email, validated.password);
         if (error) throw error;
         
-        toast({
-          title: "Login Successful",
-          description: "Welcome back!",
-        });
-        navigate("/school/dashboard");
+        // Check if user has completed onboarding
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: school } = await supabase
+            .from("schools")
+            .select("onboarding_completed")
+            .eq("user_id", user.id)
+            .single();
+          
+          if (school?.onboarding_completed) {
+            toast({
+              title: "Login Successful",
+              description: "Welcome back!",
+            });
+            navigate("/school/dashboard");
+          } else {
+            toast({
+              title: "Login Successful",
+              description: "Please complete your school details.",
+            });
+            navigate("/school/onboarding");
+          }
+        }
       }
     } catch (error: any) {
       if (error instanceof z.ZodError) {

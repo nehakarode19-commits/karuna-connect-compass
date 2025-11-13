@@ -58,12 +58,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .from("user_roles")
         .select("role")
         .eq("user_id", userId)
-        .single();
+        .maybeSingle();
 
+      // No error if user has no role yet (during onboarding)
       if (error) throw error;
       setUserRole(data?.role || null);
     } catch (error) {
-      console.error("Error fetching user role:", error);
+      // Silently set null role if user hasn't completed onboarding
       setUserRole(null);
     }
   };
