@@ -1,11 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AdminLayout } from "./AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, Calendar, MapPin, Eye, Users, Filter } from "lucide-react";
+import { Search, Calendar, MapPin, Eye, Users, Filter } from "lucide-react";
+import { CreateActivityDialog } from "@/components/admin/CreateActivityDialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface Activity {
   id: string;
@@ -103,9 +106,50 @@ const mockActivities: Activity[] = [
 ];
 
 const AdminActivity = () => {
-  const [activities] = useState<Activity[]>(mockActivities);
+  const { toast } = useToast();
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("all");
+
+  useEffect(() => {
+    fetchActivities();
+  }, []);
+
+  const fetchActivities = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("events")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      
+      const mappedActivities: Activity[] = (data || []).map((event) => ({
+        id: event.id,
+        title: event.title,
+        description: event.description || "",
+        category: "General",
+        start_date: event.start_date,
+        end_date: event.end_date,
+        location: event.location || "",
+        assigned_schools: 0,
+        submissions: 0,
+        thumbnail: event.thumbnail_url || "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=400&h=300&fit=crop",
+        status: event.status === "active" ? "ongoing" : "completed"
+      }));
+      
+      setActivities(mappedActivities);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredActivities = activities.filter((activity) => {
     const matchesSearch = 
@@ -126,17 +170,16 @@ const AdminActivity = () => {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Activity Management</h1>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+              Activity Management
+            </h1>
             <p className="text-muted-foreground mt-1">
-              Create, assign, and manage Karuna activities across all schools
+              Create and manage activities for schools
             </p>
           </div>
-          <Button className="gap-2 bg-gradient-hero border-0">
-            <Plus className="w-4 h-4" />
-            Create Activity
-          </Button>
+          <CreateActivityDialog />
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

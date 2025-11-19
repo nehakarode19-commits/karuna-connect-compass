@@ -68,9 +68,21 @@ const Index = () => {
               </div>
               <span className="text-xl font-bold text-foreground">Karuna Platform</span>
             </div>
-            <Button onClick={() => navigate("/school/auth")} className="bg-gradient-hero border-0">
-              School Login <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
+            <div className="flex items-center gap-4">
+              <Button 
+                onClick={() => navigate("/school/auth")} 
+                variant="ghost"
+                className="text-foreground hover:text-primary"
+              >
+                School Portal
+              </Button>
+              <Button 
+                onClick={() => navigate("/admin/login")}
+                className="bg-gradient-to-r from-primary to-primary/80 shadow-soft hover:shadow-medium transition-all"
+              >
+                Admin Portal <Shield className="w-4 h-4 ml-2" />
+              </Button>
+            </div>
           </div>
         </div>
       </nav>
@@ -96,19 +108,20 @@ const Index = () => {
               <Button 
                 size="lg" 
                 onClick={() => navigate("/school/auth")}
-                className="bg-gradient-hero border-0 shadow-medium hover:shadow-strong transition-all"
+                className="bg-gradient-to-r from-primary to-primary/80 shadow-medium hover:shadow-strong transition-all group"
               >
                 School Portal
-                <ArrowRight className="w-5 h-5 ml-2" />
+                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
               <Button 
-                size="lg" 
+                size="lg"
                 variant="outline"
-                className="border-2"
                 onClick={() => navigate("/admin/login")}
+                className="border-2 hover:bg-muted/50 group"
               >
                 <Shield className="w-5 h-5 mr-2" />
                 Admin Portal
+                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
             </div>
           </div>
