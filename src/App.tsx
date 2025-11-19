@@ -20,6 +20,7 @@ import AdminSettings from "./pages/admin/AdminSettings";
 import AdminSchoolApproval from "./pages/admin/AdminSchoolApproval";
 import AdminSubmissions from "./pages/admin/AdminSubmissions";
 import AdminSubmissionReview from "./pages/admin/AdminSubmissionReview";
+import AdminLeaderboard from "./pages/admin/AdminLeaderboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +44,7 @@ function App() {
               <Route path="/admin/schools" element={<AdminSchools />} />
               <Route path="/admin/submissions" element={<AdminSubmissions />} />
               <Route path="/admin/submissions/:submissionId" element={<AdminSubmissionReview />} />
+              <Route path="/admin/leaderboard" element={<AdminLeaderboard />} />
               <Route path="/admin/activity" element={<AdminActivity />} />
               <Route path="/admin/students" element={<AdminStudents />} />
               <Route path="/admin/donations" element={<AdminDonations />} />
