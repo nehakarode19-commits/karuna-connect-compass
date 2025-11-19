@@ -2,7 +2,10 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, MapPin, Plus, LogOut } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calendar, MapPin, Plus, LogOut, User } from "lucide-react";
+import { SchoolProfileForm } from "@/components/school/SchoolProfileForm";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Event {
   id: string;
@@ -73,10 +76,11 @@ const mockEvents: Event[] = [
 
 const SchoolDashboard = () => {
   const navigate = useNavigate();
+  const { signOut } = useAuth();
   const [events] = useState<Event[]>(mockEvents);
 
-  const handleLogout = () => {
-    navigate("/");
+  const handleLogout = async () => {
+    await signOut();
   };
 
   return (
@@ -95,49 +99,65 @@ const SchoolDashboard = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h2 className="text-2xl font-semibold mb-2">Assigned Activities</h2>
-          <p className="text-muted-foreground">
-            View and submit reports for your assigned Karuna activities • {events.length} events this year
-          </p>
-        </div>
+        <Tabs defaultValue="activities" className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-2 mb-8">
+            <TabsTrigger value="activities">Activities</TabsTrigger>
+            <TabsTrigger value="profile">
+              <User className="w-4 h-4 mr-2" />
+              Profile
+            </TabsTrigger>
+          </TabsList>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {events.map((event) => (
-            <Card key={event.id} className="overflow-hidden hover:shadow-lg transition-shadow group">
-              {event.thumbnail_url && (
-                <div className="aspect-video w-full overflow-hidden bg-muted">
-                  <img
-                    src={event.thumbnail_url}
-                    alt={event.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                </div>
-              )}
-              <CardContent className="p-5">
-                <h3 className="font-semibold text-lg mb-2 line-clamp-1">{event.title}</h3>
-                <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-                  {event.description}
-                </p>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                  <MapPin className="w-4 h-4 flex-shrink-0" />
-                  <span className="line-clamp-1">{event.location}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
-                  <Calendar className="w-4 h-4 flex-shrink-0" />
-                  <span>{new Date(event.start_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                </div>
-                <Button 
-                  className="w-full gap-2 bg-gradient-hero border-0"
-                  onClick={() => navigate(`/school/submit/${event.id}`)}
-                >
-                  <Plus className="w-4 h-4" />
-                  Submit Report
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+          <TabsContent value="activities" className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-semibold mb-2">Assigned Activities</h2>
+              <p className="text-muted-foreground">
+                View and submit reports for your assigned Karuna activities • {events.length} events this year
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {events.map((event) => (
+                <Card key={event.id} className="overflow-hidden hover:shadow-lg transition-shadow group">
+                  {event.thumbnail_url && (
+                    <div className="aspect-video w-full overflow-hidden bg-muted">
+                      <img
+                        src={event.thumbnail_url}
+                        alt={event.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    </div>
+                  )}
+                  <CardContent className="p-5">
+                    <h3 className="font-semibold text-lg mb-2 line-clamp-1">{event.title}</h3>
+                    <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                      {event.description}
+                    </p>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                      <MapPin className="w-4 h-4 flex-shrink-0" />
+                      <span className="line-clamp-1">{event.location}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
+                      <Calendar className="w-4 h-4 flex-shrink-0" />
+                      <span>{new Date(event.start_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                    </div>
+                    <Button 
+                      className="w-full gap-2 bg-gradient-hero border-0"
+                      onClick={() => navigate(`/school/submit/${event.id}`)}
+                    >
+                      <Plus className="w-4 h-4" />
+                      Submit Report
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="profile">
+            <SchoolProfileForm />
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
