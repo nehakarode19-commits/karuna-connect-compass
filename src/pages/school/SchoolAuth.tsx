@@ -43,55 +43,32 @@ const SchoolAuth = () => {
       
       if (isSignUp) {
         const { error } = await signUp(validated.email, validated.password, validated.fullName || "");
-        if (error) throw error;
+        if (error) {
+          if (error.message?.includes("already registered")) {
+            throw new Error("This email is already registered. Please login instead.");
+          }
+          throw error;
+        }
         
         toast({
           title: "Account Created",
-          description: "Welcome! Please complete your school details.",
+          description: "Welcome! Redirecting to dashboard...",
         });
-        navigate("/school/onboarding");
+        navigate("/school/dashboard");
       } else {
         const { error } = await signIn(validated.email, validated.password);
-        if (error) throw error;
-        
-        // Check if user has completed onboarding
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: school } = await supabase
-            .from("schools")
-            .select("onboarding_completed, status")
-            .eq("user_id", user.id)
-            .maybeSingle();
-          
-          if (!school) {
-            navigate("/school/onboarding");
-          } else if (school.status === 'pending') {
-            toast({
-              title: "Registration Pending",
-              description: "Your registration is pending admin approval.",
-            });
-            await supabase.auth.signOut();
-          } else if (school.status === 'rejected') {
-            toast({
-              title: "Registration Rejected",
-              description: "Please contact admin for more information.",
-              variant: "destructive",
-            });
-            await supabase.auth.signOut();
-          } else if (school.onboarding_completed) {
-            toast({
-              title: "Login Successful",
-              description: "Welcome back!",
-            });
-            navigate("/school/dashboard");
-          } else {
-            toast({
-              title: "Login Successful",
-              description: "Please complete your school details.",
-            });
-            navigate("/school/onboarding");
+        if (error) {
+          if (error.message?.includes("Invalid login credentials")) {
+            throw new Error("Invalid email or password. Please try again.");
           }
+          throw error;
         }
+        
+        toast({
+          title: "Login Successful",
+          description: "Welcome back!",
+        });
+        navigate("/school/dashboard");
       }
     } catch (error: any) {
       if (error instanceof z.ZodError) {
@@ -103,7 +80,7 @@ const SchoolAuth = () => {
       } else {
         toast({
           title: "Error",
-          description: "An error occurred. Please try again.",
+          description: error.message || "An error occurred. Please try again.",
           variant: "destructive",
         });
       }
