@@ -9,7 +9,8 @@ import {
   Heart, 
   FileText,
   ArrowRight,
-  CheckCircle2
+  CheckCircle2,
+  Shield
 } from "lucide-react";
 
 const Index = () => {
@@ -104,8 +105,9 @@ const Index = () => {
                 size="lg" 
                 variant="outline"
                 className="border-2"
-                onClick={() => navigate("/admin/dashboard")}
+                onClick={() => navigate("/admin/login")}
               >
+                <Shield className="w-5 h-5 mr-2" />
                 Admin Portal
               </Button>
             </div>
@@ -169,22 +171,23 @@ const Index = () => {
               Join 2,500+ schools already transforming education through our platform
             </p>
             <div className="space-y-4">
-              <div className="flex gap-4 justify-center">
+              <div className="flex gap-4 justify-center flex-wrap">
                 <Button 
                   size="lg" 
                   onClick={() => navigate("/school/auth")}
                   className="bg-background text-foreground hover:bg-background/90 shadow-strong"
                 >
-                  School Login
+                  School Portal
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
                 <Button 
                   size="lg" 
-                  onClick={() => navigate("/admin/dashboard")}
+                  onClick={() => navigate("/admin/login")}
                   variant="outline"
                   className="border-2 border-background text-background bg-transparent hover:bg-background/10"
                 >
-                  Admin Portal
+                  <Shield className="w-5 h-5 mr-2" />
+                  Admin Access
                 </Button>
               </div>
               <div className="flex items-center justify-center gap-6 text-primary-foreground/90 text-sm">
