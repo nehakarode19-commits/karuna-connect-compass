@@ -21,6 +21,7 @@ import AdminSchoolApproval from "./pages/admin/AdminSchoolApproval";
 import AdminSubmissions from "./pages/admin/AdminSubmissions";
 import AdminSubmissionReview from "./pages/admin/AdminSubmissionReview";
 import AdminLeaderboard from "./pages/admin/AdminLeaderboard";
+import AdminLogin from "./pages/admin/AdminLogin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +40,7 @@ function App() {
               <Route path="/school/onboarding" element={<SchoolOnboarding />} />
               <Route path="/school/dashboard" element={<SchoolDashboard />} />
               <Route path="/school/submit/:eventId" element={<SchoolEventSubmission />} />
+              <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/admin/school-approvals" element={<AdminSchoolApproval />} />
               <Route path="/admin/schools" element={<AdminSchools />} />

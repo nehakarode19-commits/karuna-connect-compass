@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { GraduationCap, ArrowLeft } from "lucide-react";
+import { GraduationCap, ArrowLeft, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
@@ -165,18 +165,57 @@ const SchoolAuth = () => {
                 className="w-full bg-gradient-hero border-0"
                 disabled={loading}
               >
-                {loading ? "Processing..." : (isSignUp ? "Sign up with Email" : "Login")}
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    {isSignUp ? "Creating account..." : "Signing in..."}
+                  </>
+                ) : (
+                  isSignUp ? "Create Account" : "Sign In"
+                )}
               </Button>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">
+                    {isSignUp ? "Already have an account?" : "New to Karuna?"}
+                  </span>
+                </div>
+              </div>
 
               <Button
                 type="button"
-                variant="ghost"
+                variant="outline"
                 className="w-full"
-                onClick={() => setIsSignUp(!isSignUp)}
+                onClick={() => {
+                  setIsSignUp(!isSignUp);
+                  setFormData({ email: "", fullName: "", password: "" });
+                }}
               >
-                {isSignUp ? "Already have an account? Login" : "Need an account? Sign up"}
+                {isSignUp ? "Sign In" : "Create Account"}
               </Button>
             </form>
+
+            <div className="mt-6 p-4 bg-muted/50 rounded-lg">
+              <p className="text-sm text-muted-foreground text-center">
+                Complete your school profile after signup to start submitting activities
+              </p>
+            </div>
+
+            <div className="mt-4 text-center">
+              <p className="text-sm text-muted-foreground">
+                Admin access?{" "}
+                <button
+                  onClick={() => navigate("/admin/login")}
+                  className="text-primary hover:underline font-medium"
+                >
+                  Click here
+                </button>
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>
