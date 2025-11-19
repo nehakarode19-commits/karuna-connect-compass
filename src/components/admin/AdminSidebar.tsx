@@ -8,6 +8,8 @@ import {
   Heart,
   FileText,
   Settings,
+  CheckSquare,
+  GraduationCap,
 } from "lucide-react";
 import {
   Sidebar,
@@ -24,9 +26,11 @@ import {
 
 const menuItems = [
   { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
+  { title: "School Approvals", url: "/admin/school-approvals", icon: CheckSquare },
   { title: "Schools", url: "/admin/schools", icon: School },
   { title: "Activity", url: "/admin/activity", icon: Calendar },
   { title: "Students", url: "/admin/students", icon: Users },
+  { title: "Exams", url: "/admin/exams", icon: GraduationCap },
   { title: "Donations", url: "/admin/donations", icon: Heart },
   { title: "Reports", url: "/admin/reports", icon: FileText },
   { title: "Settings", url: "/admin/settings", icon: Settings },
