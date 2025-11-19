@@ -26,7 +26,6 @@ import {
 
 const menuItems = [
   { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
-  { title: "School Approvals", url: "/admin/school-approvals", icon: CheckSquare },
   { title: "Schools", url: "/admin/schools", icon: School },
   { title: "Submissions", url: "/admin/submissions", icon: FileText },
   { title: "Leaderboard", url: "/admin/leaderboard", icon: Trophy },
