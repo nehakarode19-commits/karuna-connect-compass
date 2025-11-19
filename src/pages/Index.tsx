@@ -94,11 +94,19 @@ const Index = () => {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
                 size="lg" 
-                onClick={() => navigate("/school/dashboard")}
+                onClick={() => navigate("/school/auth")}
                 className="bg-gradient-hero border-0 shadow-medium hover:shadow-strong transition-all"
               >
                 School Portal
                 <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
+              <Button 
+                size="lg" 
+                variant="outline"
+                onClick={() => navigate("/student")}
+                className="shadow-sm hover:shadow-md transition-all"
+              >
+                Student Portal
               </Button>
               <Button 
                 size="lg" 

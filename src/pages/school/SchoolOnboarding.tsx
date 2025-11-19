@@ -47,6 +47,7 @@ const SchoolOnboarding = () => {
           contact_number: schoolData.contactNumber,
           email: schoolData.email,
           kendra_name: schoolData.kendraName,
+          status: 'pending',
           onboarding_completed: false
         });
 

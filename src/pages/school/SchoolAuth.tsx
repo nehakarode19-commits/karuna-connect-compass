@@ -59,11 +59,26 @@ const SchoolAuth = () => {
         if (user) {
           const { data: school } = await supabase
             .from("schools")
-            .select("onboarding_completed")
+            .select("onboarding_completed, status")
             .eq("user_id", user.id)
-            .single();
+            .maybeSingle();
           
-          if (school?.onboarding_completed) {
+          if (!school) {
+            navigate("/school/onboarding");
+          } else if (school.status === 'pending') {
+            toast({
+              title: "Registration Pending",
+              description: "Your registration is pending admin approval.",
+            });
+            await supabase.auth.signOut();
+          } else if (school.status === 'rejected') {
+            toast({
+              title: "Registration Rejected",
+              description: "Please contact admin for more information.",
+              variant: "destructive",
+            });
+            await supabase.auth.signOut();
+          } else if (school.onboarding_completed) {
             toast({
               title: "Login Successful",
               description: "Welcome back!",
