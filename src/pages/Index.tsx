@@ -23,8 +23,8 @@ const Index = () => {
     },
     {
       icon: Users,
-      title: "Student Excellence",
-      description: "Engage 10,000+ students annually with online exams, instant results, and digital certificates"
+      title: "Activity Submissions",
+      description: "Submit multimedia reports for value-based activities with photos, videos, and documentation"
     },
     {
       icon: TrendingUp,
@@ -50,7 +50,7 @@ const Index = () => {
 
   const stats = [
     { value: "2,500+", label: "Schools Connected" },
-    { value: "12,000+", label: "Students Engaged" },
+    { value: "12,000+", label: "Students Connected" },
     { value: "100%", label: "Digital Tracking" },
     { value: "24/7", label: "Platform Access" }
   ];
@@ -99,14 +99,6 @@ const Index = () => {
               >
                 School Portal
                 <ArrowRight className="w-5 h-5 ml-2" />
-              </Button>
-              <Button 
-                size="lg" 
-                variant="outline"
-                onClick={() => navigate("/student")}
-                className="shadow-sm hover:shadow-md transition-all"
-              >
-                Student Portal
               </Button>
               <Button 
                 size="lg" 
