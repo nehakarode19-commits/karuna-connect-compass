@@ -9,7 +9,7 @@ import {
   FileText,
   Settings,
   CheckSquare,
-  GraduationCap,
+  Trophy,
 } from "lucide-react";
 import {
   Sidebar,
@@ -29,6 +29,7 @@ const menuItems = [
   { title: "School Approvals", url: "/admin/school-approvals", icon: CheckSquare },
   { title: "Schools", url: "/admin/schools", icon: School },
   { title: "Submissions", url: "/admin/submissions", icon: FileText },
+  { title: "Leaderboard", url: "/admin/leaderboard", icon: Trophy },
   { title: "Activity", url: "/admin/activity", icon: Calendar },
   { title: "Students", url: "/admin/students", icon: Users },
   { title: "Donations", url: "/admin/donations", icon: Heart },
