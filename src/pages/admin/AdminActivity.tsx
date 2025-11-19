@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "./AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -106,6 +107,7 @@ const mockActivities: Activity[] = [
 ];
 
 const AdminActivity = () => {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -287,7 +289,12 @@ const AdminActivity = () => {
                               <div className="text-sm font-semibold">{activity.submissions} / {activity.assigned_schools}</div>
                               <div className="text-xs text-muted-foreground">Submissions</div>
                             </div>
-                            <Button size="sm" variant="outline" className="gap-2">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="gap-2"
+                              onClick={() => navigate(`/admin/activity/${activity.id}`)}
+                            >
                               <Eye className="w-4 h-4" />
                               View
                             </Button>
