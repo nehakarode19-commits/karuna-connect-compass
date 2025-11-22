@@ -129,13 +129,24 @@ const SchoolActivities = () => {
                       {event.location}
                     </div>
                   </div>
-                  <Button
-                    onClick={() => navigate(`/school/submit/${event.id}`)}
-                    className="w-full gap-2 bg-gradient-to-r from-primary to-primary/80 shadow-soft hover:shadow-medium transition-all"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Submit Report
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => navigate(`/school/activity/${event.id}`)}
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                    >
+                      View Details
+                    </Button>
+                    <Button
+                      onClick={() => navigate(`/school/submit/${event.id}`)}
+                      size="sm"
+                      className="flex-1 gap-2 bg-gradient-to-r from-primary to-primary/80"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Submit
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}

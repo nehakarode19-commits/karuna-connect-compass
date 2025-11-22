@@ -6,11 +6,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import Index from "./pages/Index";
+import DemoLogin from "./pages/DemoLogin";
 import SchoolAuth from "./pages/school/SchoolAuth";
 import SchoolOnboarding from "./pages/school/SchoolOnboarding";
 import SchoolDashboard from "./pages/school/SchoolDashboard";
 import SchoolEventSubmission from "./pages/school/SchoolEventSubmission";
 import SchoolActivities from "./pages/school/SchoolActivities";
+import SchoolActivityDetail from "./pages/school/SchoolActivityDetail";
 import SchoolSubmissions from "./pages/school/SchoolSubmissions";
 import SchoolProfile from "./pages/school/SchoolProfile";
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -38,12 +40,14 @@ function App() {
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/school/auth" element={<SchoolAuth />} />
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/demo" element={<DemoLogin />} />
+            <Route path="/school/auth" element={<SchoolAuth />} />
               <Route path="/school/onboarding" element={<SchoolOnboarding />} />
               <Route path="/school/dashboard" element={<SchoolDashboard />} />
               <Route path="/school/activities" element={<SchoolActivities />} />
+              <Route path="/school/activity/:activityId" element={<SchoolActivityDetail />} />
               <Route path="/school/submissions" element={<SchoolSubmissions />} />
               <Route path="/school/profile" element={<SchoolProfile />} />
               <Route path="/school/submit/:eventId" element={<SchoolEventSubmission />} />
