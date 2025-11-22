@@ -5,6 +5,12 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
+import PublicNavbar from "./components/PublicNavbar";
+import PublicFooter from "./components/PublicFooter";
+import Home from "./pages/public/Home";
+import About from "./pages/public/About";
+import Programs from "./pages/public/Programs";
+import Contact from "./pages/public/Contact";
 import Index from "./pages/Index";
 import DemoLogin from "./pages/DemoLogin";
 import SchoolAuth from "./pages/school/SchoolAuth";
@@ -44,7 +50,38 @@ function App() {
         <BrowserRouter>
           <AuthProvider>
           <Routes>
-            <Route path="/" element={<Index />} />
+            {/* Public Website Routes */}
+            <Route path="/" element={
+              <>
+                <PublicNavbar />
+                <Home />
+                <PublicFooter />
+              </>
+            } />
+            <Route path="/about" element={
+              <>
+                <PublicNavbar />
+                <About />
+                <PublicFooter />
+              </>
+            } />
+            <Route path="/programs" element={
+              <>
+                <PublicNavbar />
+                <Programs />
+                <PublicFooter />
+              </>
+            } />
+            <Route path="/contact" element={
+              <>
+                <PublicNavbar />
+                <Contact />
+                <PublicFooter />
+              </>
+            } />
+            
+            {/* Portal Routes */}
+            <Route path="/old-home" element={<Index />} />
             <Route path="/demo" element={<DemoLogin />} />
             <Route path="/school/auth" element={<SchoolAuth />} />
               <Route path="/school/onboarding" element={<SchoolOnboarding />} />
