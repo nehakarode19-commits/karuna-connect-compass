@@ -1,17 +1,67 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Heart, Users, TrendingUp, Award, BookOpen, Globe } from "lucide-react";
+import { Heart, Users, TrendingUp, Award, BookOpen, Globe, ArrowRight, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
+import logo from "@/assets/ki-logo.png";
 
 const Home = () => {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="relative h-[600px] bg-gradient-hero flex items-center justify-center text-white">
-        <div className="absolute inset-0 bg-black/20" />
-        <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
-          <h1 className="text-5xl md:text-6xl font-bold mb-6">A World of Compassion</h1>
-          <p className="text-xl md:text-2xl mb-8">Building a better future through kindness and education</p>
+      <section className="relative min-h-[700px] bg-gradient-hero flex items-center justify-center text-white overflow-hidden">
+        {/* Animated background elements */}
+        <div className="absolute inset-0">
+          <div className="absolute top-20 left-10 w-72 h-72 bg-primary/20 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute bottom-20 right-10 w-96 h-96 bg-secondary/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "1s" }} />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background/30" />
+        </div>
+        
+        <div className="relative z-10 text-center px-4 max-w-5xl mx-auto py-20">
+          {/* Logo with animation */}
+          <div className="mb-8 animate-fade-in">
+            <img 
+              src={logo} 
+              alt="Karuna International" 
+              className="h-32 mx-auto mb-6 drop-shadow-2xl animate-scale-in"
+            />
+          </div>
+          
+          <div className="space-y-6 animate-fade-in" style={{ animationDelay: "0.2s" }}>
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full text-sm border border-white/20">
+              <Sparkles className="w-4 h-4" />
+              <span>Transforming Lives Through Compassion</span>
+            </div>
+            
+            <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
+              Building A World of
+              <span className="block bg-gradient-to-r from-secondary via-accent to-primary bg-clip-text text-transparent">
+                Kindness & Care
+              </span>
+            </h1>
+            
+            <p className="text-xl md:text-2xl mb-8 text-white/90 max-w-3xl mx-auto">
+              Awakening compassion in young hearts. Empowering 2,500+ schools across India to create a better tomorrow.
+            </p>
+            
+            <div className="flex flex-wrap gap-4 justify-center items-center">
+              <Button size="lg" className="bg-white text-primary hover:bg-white/90 shadow-lg group" asChild>
+                <Link to="/demo">
+                  Get Started
+                  <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </Button>
+              <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10 backdrop-blur-sm" asChild>
+                <Link to="/programs">Explore Programs</Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Scroll indicator */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
+          <div className="w-6 h-10 border-2 border-white/30 rounded-full flex items-start justify-center p-2">
+            <div className="w-1 h-3 bg-white/50 rounded-full" />
+          </div>
         </div>
       </section>
 

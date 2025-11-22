@@ -140,8 +140,11 @@ const AdminReports = () => {
             </div>
 
             <div className="flex justify-end gap-3 mt-6">
-              <Button variant="outline">Preview</Button>
-              <Button className="gap-2 bg-gradient-hero border-0">
+              <Button variant="outline" className="gap-2">
+                <BarChart3 className="w-4 h-4" />
+                Preview
+              </Button>
+              <Button className="gap-2 bg-gradient-hero border-0 shadow-lg">
                 <Download className="w-4 h-4" />
                 Generate Report
               </Button>
