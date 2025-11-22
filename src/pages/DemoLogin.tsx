@@ -4,11 +4,12 @@ import { useNavigate } from "react-router-dom";
 import { Shield, School, ArrowRight, Zap } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
 
 const DemoLogin = () => {
   const navigate = useNavigate();
-  const { signIn } = useAuth();
+  const { signIn, signUp } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState<string | null>(null);
 
@@ -19,18 +20,67 @@ const DemoLogin = () => {
       const credentials = {
         admin: {
           email: "admin@universal-software.com",
-          password: "123456"
+          password: "123456",
+          fullName: "Admin User"
         },
         school: {
           email: "school@demo.com",
-          password: "123456"
+          password: "123456",
+          fullName: "Demo School"
         }
       };
 
-      const { email, password } = credentials[role];
-      const { error } = await signIn(email, password);
+      const { email, password, fullName } = credentials[role];
       
-      if (error) throw error;
+      // Try to sign in first
+      let { error: signInError } = await signIn(email, password);
+      
+      // If user doesn't exist, create account
+      if (signInError?.message?.includes("Invalid login credentials")) {
+        toast({
+          title: "Creating Demo Account",
+          description: "Setting up your demo account...",
+        });
+
+        const { error: signUpError } = await signUp(email, password, fullName);
+        if (signUpError) throw signUpError;
+
+        // Sign in after creating account
+        const { error: newSignInError } = await signIn(email, password);
+        if (newSignInError) throw newSignInError;
+
+        // Set role for the new user
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase.from("user_roles").insert({
+            user_id: user.id,
+            role: role === "admin" ? "admin" : "school_admin"
+          });
+
+          // If school, create school profile
+          if (role === "school") {
+            await supabase.from("profiles").upsert({
+              id: user.id,
+              email: user.email!,
+              full_name: fullName
+            });
+
+            await supabase.from("schools").insert({
+              user_id: user.id,
+              kc_no: "DEMO001",
+              school_name: "Demo School",
+              principal_name: "Demo Principal",
+              contact_number: "+91 9876543210",
+              email: user.email!,
+              kendra_name: "Demo Kendra",
+              status: "approved",
+              onboarding_completed: true
+            });
+          }
+        }
+      } else if (signInError) {
+        throw signInError;
+      }
 
       toast({
         title: "Login Successful",
@@ -55,11 +105,11 @@ const DemoLogin = () => {
         <div className="text-center space-y-2">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
             <Zap className="w-4 h-4" />
-            Quick Demo Access
+            Quick Demo Access - Accounts auto-created on first login
           </div>
           <h1 className="text-4xl font-bold">Karuna Platform Demo</h1>
           <p className="text-muted-foreground text-lg">
-            Choose your role to explore the platform instantly
+            Choose your role to explore the platform instantly - no setup required
           </p>
         </div>
 
