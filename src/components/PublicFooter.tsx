@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
-import { Heart, Mail, Phone, MapPin } from "lucide-react";
+import { Mail, Phone, MapPin } from "lucide-react";
+import logo from "@/assets/ki-logo.png";
 
 const PublicFooter = () => {
   return (
@@ -8,11 +9,8 @@ const PublicFooter = () => {
         <div className="grid md:grid-cols-4 gap-8">
           {/* About Column */}
           <div>
-            <div className="flex items-center space-x-2 mb-4">
-              <div className="w-10 h-10 bg-gradient-hero rounded-full flex items-center justify-center">
-                <Heart className="w-5 h-5 text-white" />
-              </div>
-              <span className="font-bold text-lg">Karuna International</span>
+            <div className="mb-4">
+              <img src={logo} alt="Karuna International" className="h-10 w-auto" />
             </div>
             <p className="text-sm text-muted-foreground">
               Building compassionate global citizens through value-based education and community engagement.
