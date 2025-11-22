@@ -20,6 +20,7 @@ import SchoolEventSubmission from "./pages/school/SchoolEventSubmission";
 import SchoolActivities from "./pages/school/SchoolActivities";
 import SchoolActivityDetail from "./pages/school/SchoolActivityDetail";
 import SchoolSubmissions from "./pages/school/SchoolSubmissions";
+import SchoolSubmissionDetail from "./pages/school/SchoolSubmissionDetail";
 import SchoolProfile from "./pages/school/SchoolProfile";
 import SchoolStudents from "./pages/school/SchoolStudents";
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -92,6 +93,7 @@ function App() {
               <Route path="/school/profile" element={<SchoolProfile />} />
               <Route path="/school/students" element={<SchoolStudents />} />
               <Route path="/school/submit/:eventId" element={<SchoolEventSubmission />} />
+              <Route path="/school/submission/:submissionId" element={<SchoolSubmissionDetail />} />
               <Route path="/school/submit-report" element={<SchoolActivities />} />
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
