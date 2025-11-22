@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,19 +6,25 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Upload, Image, Video, FileText, X } from "lucide-react";
+import { ArrowLeft, Upload, Image, Video, FileText, X, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { SchoolLayout } from "./SchoolLayout";
 
 const SchoolEventSubmission = () => {
   const navigate = useNavigate();
   const { eventId } = useParams();
   const { toast } = useToast();
   
+  const [loading, setLoading] = useState(false);
   const [programType, setProgramType] = useState("");
   const [description, setDescription] = useState("");
   const [photos, setPhotos] = useState<File[]>([]);
   const [video, setVideo] = useState<File | null>(null);
   const [document, setDocument] = useState<File | null>(null);
+  const [mediaName, setMediaName] = useState("");
+  const [publicationDate, setPublicationDate] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -31,29 +37,109 @@ const SchoolEventSubmission = () => {
     setPhotos(photos.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    toast({
-      title: "Report Submitted Successfully!",
-      description: "Your activity report has been submitted for review.",
-    });
-    
-    navigate("/school/dashboard");
+    if (description.length < 100) {
+      toast({
+        title: "Description Too Short",
+        description: "Please provide at least 100 characters in the description.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (photos.length < 3) {
+      toast({
+        title: "Photos Required",
+        description: "Please upload at least 3 photos of the activity.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Get current user and school
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data: schoolData, error: schoolError } = await supabase
+        .from("schools")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+
+      if (schoolError) throw schoolError;
+
+      // Create submission
+      const { data: submissionData, error: submissionError } = await supabase
+        .from("event_submissions")
+        .insert({
+          event_id: eventId,
+          school_id: schoolData.id,
+          short_description: description,
+          status: "pending",
+        })
+        .select()
+        .single();
+
+      if (submissionError) throw submissionError;
+
+      // Upload photos as media files
+      for (const photo of photos) {
+        const photoUrl = URL.createObjectURL(photo);
+        await supabase.from("media_files").insert({
+          submission_id: submissionData.id,
+          file_url: photoUrl,
+          file_type: photo.type,
+          file_size: photo.size,
+        });
+      }
+
+      // Upload video if present
+      if (video) {
+        const videoUrl = URL.createObjectURL(video);
+        await supabase.from("media_files").insert({
+          submission_id: submissionData.id,
+          file_url: videoUrl,
+          file_type: video.type,
+          file_size: video.size,
+        });
+      }
+
+      // Add publication details if provided
+      if (mediaName || websiteUrl) {
+        await supabase.from("publications").insert({
+          submission_id: submissionData.id,
+          media_type: "print",
+          media_name: mediaName,
+          url: websiteUrl,
+          publication_date: publicationDate || null,
+        });
+      }
+
+      toast({
+        title: "Report Submitted Successfully!",
+        description: "Your activity report has been submitted for review.",
+      });
+      
+      navigate("/school/submissions");
+    } catch (error: any) {
+      toast({
+        title: "Submission Failed",
+        description: error.message || "Failed to submit report. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <Button variant="ghost" onClick={() => navigate("/school/dashboard")} className="gap-2">
-            <ArrowLeft className="w-4 h-4" />
-            Back to Dashboard
-          </Button>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 py-8 max-w-4xl">
+    <SchoolLayout>
+      <div className="max-w-4xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Submit Activity Report</h1>
           <p className="text-muted-foreground">
@@ -94,8 +180,11 @@ const SchoolEventSubmission = () => {
                   onChange={(e) => setDescription(e.target.value)}
                   rows={6}
                   required
+                  minLength={100}
                 />
-                <p className="text-xs text-muted-foreground">Minimum 100 characters</p>
+                <p className="text-xs text-muted-foreground">
+                  {description.length}/100 characters (minimum required)
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -213,22 +302,33 @@ const SchoolEventSubmission = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="mediaName">Media Name</Label>
-                  <Input id="mediaName" placeholder="e.g., Times of India" />
+                  <Input 
+                    id="mediaName" 
+                    placeholder="e.g., Times of India"
+                    value={mediaName}
+                    onChange={(e) => setMediaName(e.target.value)}
+                  />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="publicationDate">Publication Date</Label>
-                  <Input id="publicationDate" type="date" />
+                  <Input 
+                    id="publicationDate" 
+                    type="date"
+                    value={publicationDate}
+                    onChange={(e) => setPublicationDate(e.target.value)}
+                  />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="websiteUrl">Website URL</Label>
-                  <Input id="websiteUrl" type="url" placeholder="https://" />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="publicationScan">Publication Scan</Label>
-                  <Input id="publicationScan" type="file" accept="image/*,.pdf" />
+                  <Input 
+                    id="websiteUrl" 
+                    type="url" 
+                    placeholder="https://"
+                    value={websiteUrl}
+                    onChange={(e) => setWebsiteUrl(e.target.value)}
+                  />
                 </div>
               </div>
             </CardContent>
@@ -238,18 +338,28 @@ const SchoolEventSubmission = () => {
             <Button
               type="button"
               variant="outline"
-              onClick={() => navigate("/school/dashboard")}
+              onClick={() => navigate(`/school/activity/${eventId}`)}
+              disabled={loading}
             >
               Cancel
             </Button>
-            <Button type="submit" className="gap-2 bg-gradient-hero border-0">
-              <Upload className="w-4 h-4" />
-              Submit Report
+            <Button type="submit" className="gap-2 bg-gradient-hero border-0" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4" />
+                  Submit Report
+                </>
+              )}
             </Button>
           </div>
         </form>
-      </main>
-    </div>
+      </div>
+    </SchoolLayout>
   );
 };
 
