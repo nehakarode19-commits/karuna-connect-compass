@@ -162,12 +162,15 @@ const SchoolActivityDetail = () => {
 
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-4">
-                <h3 className="font-semibold text-lg">Event Details</h3>
+                <h3 className="font-semibold text-lg flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-primary" />
+                  Event Details
+                </h3>
                 
                 <div className="space-y-3">
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
                     <Calendar className="w-5 h-5 text-primary mt-0.5" />
-                    <div>
+                    <div className="flex-1">
                       <p className="text-sm font-medium">Start Date</p>
                       <p className="text-sm text-muted-foreground">
                         {format(new Date(activity.start_date), "PPP")}
@@ -175,9 +178,9 @@ const SchoolActivityDetail = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
                     <Calendar className="w-5 h-5 text-primary mt-0.5" />
-                    <div>
+                    <div className="flex-1">
                       <p className="text-sm font-medium">End Date</p>
                       <p className="text-sm text-muted-foreground">
                         {format(new Date(activity.end_date), "PPP")}
@@ -185,9 +188,9 @@ const SchoolActivityDetail = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
                     <MapPin className="w-5 h-5 text-primary mt-0.5" />
-                    <div>
+                    <div className="flex-1">
                       <p className="text-sm font-medium">Location</p>
                       <p className="text-sm text-muted-foreground">
                         {activity.location || "Not specified"}
@@ -195,9 +198,9 @@ const SchoolActivityDetail = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
                     <Clock className="w-5 h-5 text-primary mt-0.5" />
-                    <div>
+                    <div className="flex-1">
                       <p className="text-sm font-medium">Duration</p>
                       <p className="text-sm text-muted-foreground">
                         {Math.ceil((new Date(activity.end_date).getTime() - new Date(activity.start_date).getTime()) / (1000 * 60 * 60 * 24))} days
@@ -208,24 +211,35 @@ const SchoolActivityDetail = () => {
               </div>
 
               <div className="space-y-4">
-                <h3 className="font-semibold text-lg">Submission Guidelines</h3>
+                <h3 className="font-semibold text-lg flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-primary" />
+                  Submission Guidelines
+                </h3>
                 
-                <Card className="bg-muted/50 border-0">
+                <Card className="bg-gradient-to-br from-primary/5 to-secondary/5 border-primary/20">
                   <CardContent className="p-4 space-y-3 text-sm">
                     <div className="flex items-start gap-2">
-                      <FileText className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span className="text-xs font-bold text-primary">1</span>
+                      </div>
                       <p>Provide a detailed description of your activity (minimum 100 characters)</p>
                     </div>
                     <div className="flex items-start gap-2">
-                      <Users className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span className="text-xs font-bold text-primary">2</span>
+                      </div>
                       <p>Upload photos showing student participation (at least 3 photos required)</p>
                     </div>
                     <div className="flex items-start gap-2">
-                      <FileText className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span className="text-xs font-bold text-primary">3</span>
+                      </div>
                       <p>Optional: Include supporting documents or certificates</p>
                     </div>
                     <div className="flex items-start gap-2">
-                      <FileText className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span className="text-xs font-bold text-primary">4</span>
+                      </div>
                       <p>Optional: Add publication details if featured in media</p>
                     </div>
                   </CardContent>
