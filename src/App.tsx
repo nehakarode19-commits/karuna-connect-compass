@@ -15,6 +15,7 @@ import SchoolActivities from "./pages/school/SchoolActivities";
 import SchoolActivityDetail from "./pages/school/SchoolActivityDetail";
 import SchoolSubmissions from "./pages/school/SchoolSubmissions";
 import SchoolProfile from "./pages/school/SchoolProfile";
+import SchoolStudents from "./pages/school/SchoolStudents";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminSchools from "./pages/admin/AdminSchools";
 import AdminActivity from "./pages/admin/AdminActivity";
@@ -28,6 +29,8 @@ import AdminSubmissionReview from "./pages/admin/AdminSubmissionReview";
 import AdminLeaderboard from "./pages/admin/AdminLeaderboard";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminActivityDetail from "./pages/admin/AdminActivityDetail";
+import EvaluatorDashboard from "./pages/evaluator/EvaluatorDashboard";
+import EvaluatorSubmissions from "./pages/evaluator/EvaluatorSubmissions";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -50,6 +53,7 @@ function App() {
               <Route path="/school/activity/:activityId" element={<SchoolActivityDetail />} />
               <Route path="/school/submissions" element={<SchoolSubmissions />} />
               <Route path="/school/profile" element={<SchoolProfile />} />
+              <Route path="/school/students" element={<SchoolStudents />} />
               <Route path="/school/submit/:eventId" element={<SchoolEventSubmission />} />
               <Route path="/school/submit-report" element={<SchoolActivities />} />
               <Route path="/admin/login" element={<AdminLogin />} />
@@ -65,6 +69,11 @@ function App() {
               <Route path="/admin/donations" element={<AdminDonations />} />
               <Route path="/admin/reports" element={<AdminReports />} />
               <Route path="/admin/settings" element={<AdminSettings />} />
+              <Route path="/evaluator/dashboard" element={<EvaluatorDashboard />} />
+              <Route path="/evaluator/submissions" element={<EvaluatorSubmissions />} />
+              <Route path="/evaluator/leaderboard" element={<AdminLeaderboard />} />
+              <Route path="/evaluator/schools" element={<AdminSchools />} />
+              <Route path="/evaluator/students" element={<AdminStudents />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
