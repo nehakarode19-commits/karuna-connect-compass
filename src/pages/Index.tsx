@@ -70,6 +70,13 @@ const Index = () => {
             </div>
             <div className="flex items-center gap-4">
               <Button 
+                onClick={() => navigate("/demo")} 
+                variant="default"
+                className="bg-gradient-to-r from-primary to-primary/80"
+              >
+                Quick Demo Login
+              </Button>
+              <Button 
                 onClick={() => navigate("/school/auth")} 
                 variant="ghost"
                 className="text-foreground hover:text-primary"
@@ -78,7 +85,7 @@ const Index = () => {
               </Button>
               <Button 
                 onClick={() => navigate("/admin/login")}
-                className="bg-gradient-to-r from-primary to-primary/80 shadow-soft hover:shadow-medium transition-all"
+                variant="outline"
               >
                 Admin Portal <Shield className="w-4 h-4 ml-2" />
               </Button>
