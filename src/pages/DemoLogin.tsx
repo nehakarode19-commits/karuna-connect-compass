@@ -13,7 +13,7 @@ const DemoLogin = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState<string | null>(null);
 
-  const handleQuickLogin = async (role: "admin" | "school") => {
+  const handleQuickLogin = async (role: "admin" | "school" | "evaluator") => {
     setLoading(role);
     
     try {
@@ -27,6 +27,11 @@ const DemoLogin = () => {
           email: "school@demo.com",
           password: "123456",
           fullName: "Demo School"
+        },
+        evaluator: {
+          email: "evaluator@demo.com",
+          password: "123456",
+          fullName: "Demo Evaluator"
         }
       };
 
@@ -54,7 +59,7 @@ const DemoLogin = () => {
         if (user) {
           await supabase.from("user_roles").insert({
             user_id: user.id,
-            role: role === "admin" ? "admin" : "school_admin"
+            role: role === "admin" ? "admin" : role === "evaluator" ? "evaluator" : "school_admin"
           });
 
           // If school, create school profile
@@ -84,10 +89,10 @@ const DemoLogin = () => {
 
       toast({
         title: "Login Successful",
-        description: `Logged in as ${role === "admin" ? "Administrator" : "School"}`,
+        description: `Logged in as ${role === "admin" ? "Administrator" : role === "evaluator" ? "Evaluator" : "School"}`,
       });
 
-      navigate(role === "admin" ? "/admin/dashboard" : "/school/dashboard");
+      navigate(role === "admin" ? "/admin/dashboard" : role === "evaluator" ? "/evaluator/dashboard" : "/school/dashboard");
     } catch (error: any) {
       toast({
         title: "Login Failed",
@@ -113,7 +118,7 @@ const DemoLogin = () => {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid md:grid-cols-3 gap-6">
           {/* Admin Login Card */}
           <Card className="relative overflow-hidden border-2 hover:shadow-2xl transition-all group">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -239,6 +244,63 @@ const DemoLogin = () => {
 
               <div className="pt-2 text-xs text-center text-muted-foreground space-y-1">
                 <p className="font-mono">school@demo.com</p>
+                <p className="font-mono">Password: 123456</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Evaluator Login Card */}
+          <Card className="relative overflow-hidden border-2 hover:shadow-2xl transition-all group">
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-pink-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <CardHeader className="relative">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center mx-auto mb-4">
+                <Shield className="w-8 h-8 text-white" />
+              </div>
+              <CardTitle className="text-2xl text-center">Evaluator Portal</CardTitle>
+              <CardDescription className="text-center">
+                Review and score school activity submissions with evaluation tools
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="relative space-y-4">
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                  <span>Review all submissions</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                  <span>Score & grade activities</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                  <span>View leaderboards</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                  <span>Track school performance</span>
+                </div>
+              </div>
+
+              <div className="pt-4 space-y-3">
+                <Button 
+                  onClick={() => handleQuickLogin("evaluator")}
+                  disabled={loading !== null}
+                  className="w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 group"
+                  size="lg"
+                >
+                  {loading === "evaluator" ? (
+                    "Logging in..."
+                  ) : (
+                    <>
+                      Quick Login as Evaluator
+                      <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              <div className="pt-2 text-xs text-center text-muted-foreground space-y-1">
+                <p className="font-mono">evaluator@demo.com</p>
                 <p className="font-mono">Password: 123456</p>
               </div>
             </CardContent>

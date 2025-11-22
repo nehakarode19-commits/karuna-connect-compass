@@ -6,6 +6,7 @@ import {
   FileText,
   User,
   Upload,
+  Users,
 } from "lucide-react";
 import {
   Sidebar,
@@ -25,6 +26,7 @@ const menuItems = [
   { title: "Activities", url: "/school/activities", icon: Calendar },
   { title: "My Submissions", url: "/school/submissions", icon: FileText },
   { title: "Submit Report", url: "/school/submit-report", icon: Upload },
+  { title: "Students", url: "/school/students", icon: Users },
   { title: "Profile", url: "/school/profile", icon: User },
 ];
 
