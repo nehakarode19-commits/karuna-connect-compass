@@ -1,11 +1,36 @@
+import { useState, useEffect } from "react";
 import { AdminLayout } from "./AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Download, FileText, BarChart3, PieChart, TrendingUp, Calendar } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const AdminReports = () => {
+  const { toast } = useToast();
+  const [reportType, setReportType] = useState("activity");
+  const [chapter, setChapter] = useState("all");
+  const [dateRange, setDateRange] = useState("this-month");
+  const [chapters, setChapters] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchChapters();
+  }, []);
+
+  const fetchChapters = async () => {
+    const { data } = await supabase.from("chapters").select("*").order("name");
+    if (data) setChapters(data);
+  };
+
+  const handleGenerateReport = async () => {
+    toast({
+      title: "Generating Report",
+      description: "Your report is being prepared...",
+    });
+    // Add actual report generation logic here
+  };
   const reportTypes = [
     {
       id: "activity",
@@ -77,7 +102,7 @@ const AdminReports = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="space-y-2">
                 <Label>Report Type</Label>
-                <Select>
+                <Select value={reportType} onValueChange={setReportType}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
@@ -93,24 +118,22 @@ const AdminReports = () => {
 
               <div className="space-y-2">
                 <Label>Chapter</Label>
-                <Select>
+                <Select value={chapter} onValueChange={setChapter}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select chapter" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Chapters</SelectItem>
-                    <SelectItem value="ahmedabad">Ahmedabad</SelectItem>
-                    <SelectItem value="pune">Pune</SelectItem>
-                    <SelectItem value="mumbai">Mumbai</SelectItem>
-                    <SelectItem value="delhi">Delhi</SelectItem>
-                    <SelectItem value="nashik">Nashik</SelectItem>
+                    {chapters.map((ch) => (
+                      <SelectItem key={ch.id} value={ch.id}>{ch.name}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
                 <Label>Date Range</Label>
-                <Select>
+                <Select value={dateRange} onValueChange={setDateRange}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select range" />
                   </SelectTrigger>
@@ -144,7 +167,7 @@ const AdminReports = () => {
                 <BarChart3 className="w-4 h-4" />
                 Preview
               </Button>
-              <Button className="gap-2 bg-gradient-hero border-0 shadow-lg">
+              <Button onClick={handleGenerateReport} className="gap-2 bg-gradient-hero border-0 shadow-lg">
                 <Download className="w-4 h-4" />
                 Generate Report
               </Button>
