@@ -1,114 +1,147 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AdminLayout } from "./AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Search, Download, Heart, TrendingUp, Repeat, IndianRupee, Mail, CheckCircle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface Donation {
   id: string;
-  donor_name: string;
-  email: string;
   amount: number;
-  type: "online" | "offline";
-  frequency: "one-time" | "recurring";
-  status: "completed" | "pending" | "failed";
+  donation_type: string;
+  payment_method: string;
+  status: string;
   receipt_sent: boolean;
-  date: string;
+  donation_date: string;
+  is_recurring: boolean;
+  donors?: {
+    name: string;
+    email: string;
+  };
 }
 
-const mockDonations: Donation[] = [
-  {
-    id: "1",
-    donor_name: "Rajesh Kumar",
-    email: "rajesh.k@email.com",
-    amount: 25000,
-    type: "online",
-    frequency: "recurring",
-    status: "completed",
-    receipt_sent: true,
-    date: "2024-01-15"
-  },
-  {
-    id: "2",
-    donor_name: "Priya Sharma",
-    email: "priya.sharma@email.com",
-    amount: 10000,
-    type: "online",
-    frequency: "one-time",
-    status: "completed",
-    receipt_sent: true,
-    date: "2024-01-14"
-  },
-  {
-    id: "3",
-    donor_name: "Amit Patel",
-    email: "amit.patel@email.com",
-    amount: 50000,
-    type: "offline",
-    frequency: "one-time",
-    status: "completed",
-    receipt_sent: false,
-    date: "2024-01-13"
-  },
-  {
-    id: "4",
-    donor_name: "Neha Desai",
-    email: "neha.d@email.com",
-    amount: 15000,
-    type: "online",
-    frequency: "recurring",
-    status: "completed",
-    receipt_sent: true,
-    date: "2024-01-12"
-  },
-  {
-    id: "5",
-    donor_name: "Vikram Singh",
-    email: "vikram.singh@email.com",
-    amount: 5000,
-    type: "online",
-    frequency: "one-time",
-    status: "pending",
-    receipt_sent: false,
-    date: "2024-01-11"
-  },
-  {
-    id: "6",
-    donor_name: "Anita Joshi",
-    email: "anita.joshi@email.com",
-    amount: 30000,
-    type: "offline",
-    frequency: "one-time",
-    status: "completed",
-    receipt_sent: true,
-    date: "2024-01-10"
-  }
-];
-
 const AdminDonations = () => {
-  const [donations] = useState<Donation[]>(mockDonations);
+  const { toast } = useToast();
+  const [donations, setDonations] = useState<Donation[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("all");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    donor_name: "",
+    donor_email: "",
+    amount: "",
+    donation_type: "general",
+    payment_method: "cash",
+  });
+
+  useEffect(() => {
+    fetchDonations();
+  }, []);
+
+  const fetchDonations = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("donations")
+        .select(`
+          *,
+          donors (
+            name,
+            email
+          )
+        `)
+        .order("donation_date", { ascending: false });
+
+      if (error) throw error;
+      setDonations(data || []);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      // First create donor
+      const { data: donorData, error: donorError } = await supabase
+        .from("donors")
+        .insert({
+          name: formData.donor_name,
+          email: formData.donor_email,
+        })
+        .select()
+        .single();
+
+      if (donorError) throw donorError;
+
+      // Then create donation
+      const { error: donationError } = await supabase
+        .from("donations")
+        .insert({
+          donor_id: donorData.id,
+          amount: parseFloat(formData.amount),
+          donation_type: formData.donation_type,
+          payment_method: formData.payment_method,
+          status: "completed",
+          receipt_sent: false,
+        });
+
+      if (donationError) throw donationError;
+
+      toast({
+        title: "Success",
+        description: "Donation recorded successfully",
+      });
+
+      setDialogOpen(false);
+      setFormData({
+        donor_name: "",
+        donor_email: "",
+        amount: "",
+        donation_type: "general",
+        payment_method: "cash",
+      });
+      fetchDonations();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   const filteredDonations = donations.filter((donation) => {
+    const donorName = donation.donors?.name || "";
+    const donorEmail = donation.donors?.email || "";
     const matchesSearch = 
-      donation.donor_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      donation.email.toLowerCase().includes(searchTerm.toLowerCase());
+      donorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      donorEmail.toLowerCase().includes(searchTerm.toLowerCase());
     
     if (activeTab === "all") return matchesSearch;
-    if (activeTab === "online") return matchesSearch && donation.type === "online";
-    if (activeTab === "offline") return matchesSearch && donation.type === "offline";
-    if (activeTab === "recurring") return matchesSearch && donation.frequency === "recurring";
+    if (activeTab === "online") return matchesSearch && (donation.payment_method === "upi" || donation.payment_method === "card");
+    if (activeTab === "offline") return matchesSearch && donation.payment_method === "cash";
+    if (activeTab === "recurring") return matchesSearch && donation.is_recurring;
     return matchesSearch;
   });
 
   const totalAmount = donations.reduce((sum, d) => d.status === "completed" ? sum + d.amount : sum, 0);
-  const onlineAmount = donations.filter(d => d.type === "online" && d.status === "completed").reduce((sum, d) => sum + d.amount, 0);
-  const offlineAmount = donations.filter(d => d.type === "offline" && d.status === "completed").reduce((sum, d) => sum + d.amount, 0);
-  const recurringCount = donations.filter(d => d.frequency === "recurring").length;
+  const onlineAmount = donations.filter(d => (d.payment_method === "upi" || d.payment_method === "card") && d.status === "completed").reduce((sum, d) => sum + d.amount, 0);
+  const offlineAmount = donations.filter(d => d.payment_method === "cash" && d.status === "completed").reduce((sum, d) => sum + d.amount, 0);
+  const recurringCount = donations.filter(d => d.is_recurring).length;
 
   const stats = [
     { 
@@ -147,10 +180,58 @@ const AdminDonations = () => {
               Track and manage all donations with automated receipts
             </p>
           </div>
-          <Button className="gap-2 bg-gradient-hero border-0">
-            <Plus className="w-4 h-4" />
-            Record Donation
-          </Button>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-2 bg-gradient-hero border-0">
+                <Plus className="w-4 h-4" />
+                Record Donation
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Record Offline Donation</DialogTitle>
+                <DialogDescription>Enter donation details to record manually</DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Donor Name *</Label>
+                  <Input value={formData.donor_name} onChange={(e) => setFormData({...formData, donor_name: e.target.value})} required />
+                </div>
+                <div className="space-y-2">
+                  <Label>Donor Email *</Label>
+                  <Input type="email" value={formData.donor_email} onChange={(e) => setFormData({...formData, donor_email: e.target.value})} required />
+                </div>
+                <div className="space-y-2">
+                  <Label>Amount (₹) *</Label>
+                  <Input type="number" value={formData.amount} onChange={(e) => setFormData({...formData, amount: e.target.value})} required />
+                </div>
+                <div className="space-y-2">
+                  <Label>Donation Type</Label>
+                  <Select value={formData.donation_type} onValueChange={(v) => setFormData({...formData, donation_type: v})}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="general">General</SelectItem>
+                      <SelectItem value="education">Education</SelectItem>
+                      <SelectItem value="health">Health</SelectItem>
+                      <SelectItem value="infrastructure">Infrastructure</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Payment Method</Label>
+                  <Select value={formData.payment_method} onValueChange={(v) => setFormData({...formData, payment_method: v})}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cash">Cash</SelectItem>
+                      <SelectItem value="cheque">Cheque</SelectItem>
+                      <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button type="submit" className="w-full">Record Donation</Button>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -225,56 +306,66 @@ const AdminDonations = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredDonations.map((donation) => (
-                        <tr key={donation.id} className="border-b hover:bg-muted/30 transition-colors">
-                          <td className="p-4">
-                            <div className="font-medium">{donation.donor_name}</div>
-                          </td>
-                          <td className="p-4">
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <Mail className="w-3 h-3" />
-                              <span className="text-xs">{donation.email}</span>
-                            </div>
-                          </td>
-                          <td className="p-4">
-                            <div className="font-semibold">₹{donation.amount.toLocaleString('en-IN')}</div>
-                          </td>
-                          <td className="p-4">
-                            <Badge variant={donation.type === "online" ? "default" : "secondary"}>
-                              {donation.type}
-                            </Badge>
-                          </td>
-                          <td className="p-4">
-                            <Badge variant="outline" className={donation.frequency === "recurring" ? "border-purple-500 text-purple-600" : ""}>
-                              {donation.frequency}
-                            </Badge>
-                          </td>
-                          <td className="p-4">
-                            <Badge variant={
-                              donation.status === "completed" ? "default" : 
-                              donation.status === "pending" ? "secondary" : 
-                              "destructive"
-                            }>
-                              {donation.status}
-                            </Badge>
-                          </td>
-                          <td className="p-4">
-                            <span className="text-sm text-muted-foreground">
-                              {new Date(donation.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                            </span>
-                          </td>
-                          <td className="p-4">
-                            {donation.receipt_sent ? (
-                              <Badge variant="outline" className="gap-1 text-green-600 border-green-600">
-                                <CheckCircle className="w-3 h-3" />
-                                Sent
-                              </Badge>
-                            ) : (
-                              <Button size="sm" variant="outline">Send Receipt</Button>
-                            )}
-                          </td>
+                      {loading ? (
+                        <tr>
+                          <td colSpan={8} className="p-8 text-center text-muted-foreground">Loading donations...</td>
                         </tr>
-                      ))}
+                      ) : filteredDonations.length === 0 ? (
+                        <tr>
+                          <td colSpan={8} className="p-8 text-center text-muted-foreground">No donations found</td>
+                        </tr>
+                      ) : (
+                        filteredDonations.map((donation) => (
+                          <tr key={donation.id} className="border-b hover:bg-muted/30 transition-colors">
+                            <td className="p-4">
+                              <div className="font-medium">{donation.donors?.name || "N/A"}</div>
+                            </td>
+                            <td className="p-4">
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Mail className="w-3 h-3" />
+                                <span className="text-xs">{donation.donors?.email || "N/A"}</span>
+                              </div>
+                            </td>
+                            <td className="p-4">
+                              <div className="font-semibold">₹{donation.amount.toLocaleString('en-IN')}</div>
+                            </td>
+                            <td className="p-4">
+                              <Badge variant={donation.payment_method === "cash" ? "secondary" : "default"}>
+                                {donation.payment_method}
+                              </Badge>
+                            </td>
+                            <td className="p-4">
+                              <Badge variant="outline" className={donation.is_recurring ? "border-purple-500 text-purple-600" : ""}>
+                                {donation.is_recurring ? "recurring" : "one-time"}
+                              </Badge>
+                            </td>
+                            <td className="p-4">
+                              <Badge variant={
+                                donation.status === "completed" ? "default" : 
+                                donation.status === "pending" ? "secondary" : 
+                                "destructive"
+                              }>
+                                {donation.status}
+                              </Badge>
+                            </td>
+                            <td className="p-4">
+                              <span className="text-sm text-muted-foreground">
+                                {new Date(donation.donation_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              </span>
+                            </td>
+                            <td className="p-4">
+                              {donation.receipt_sent ? (
+                                <Badge variant="outline" className="gap-1 text-green-600 border-green-600">
+                                  <CheckCircle className="w-3 h-3" />
+                                  Sent
+                                </Badge>
+                              ) : (
+                                <Button size="sm" variant="outline">Send Receipt</Button>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
