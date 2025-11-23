@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Calendar, MapPin, Users, FileText, TrendingUp, Eye, Award } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, Users, FileText, TrendingUp, Eye, Award, UserPlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { AssignActivityDialog } from "@/components/admin/AssignActivityDialog";
 
 interface Activity {
   id: string;
@@ -39,6 +40,7 @@ const AdminActivityDetail = () => {
   const [activity, setActivity] = useState<Activity | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
 
   useEffect(() => {
     if (activityId) {
@@ -159,9 +161,15 @@ const AdminActivityDetail = () => {
                     <h1 className="text-3xl font-bold mb-2">{activity.title}</h1>
                     <p className="text-muted-foreground">{activity.description}</p>
                   </div>
-                  <Badge variant={activity.status === "active" ? "default" : "secondary"}>
-                    {activity.status}
-                  </Badge>
+                  <div className="flex gap-2">
+                    <Button onClick={() => setAssignDialogOpen(true)} size="sm">
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Assign
+                    </Button>
+                    <Badge variant={activity.status === "active" ? "default" : "secondary"}>
+                      {activity.status}
+                    </Badge>
+                  </div>
                 </div>
                 <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                   <div className="flex items-center gap-2">
@@ -272,6 +280,13 @@ const AdminActivityDetail = () => {
           </CardContent>
         </Card>
       </div>
+
+      <AssignActivityDialog
+        open={assignDialogOpen}
+        onOpenChange={setAssignDialogOpen}
+        eventId={activityId!}
+        eventTitle={activity?.title || ""}
+      />
     </AdminLayout>
   );
 };
