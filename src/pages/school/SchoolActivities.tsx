@@ -26,21 +26,59 @@ const SchoolActivities = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [school, setSchool] = useState<any>(null);
 
   useEffect(() => {
-    fetchEvents();
+    fetchSchoolAndEvents();
   }, []);
 
-  const fetchEvents = async () => {
+  const fetchSchoolAndEvents = async () => {
     try {
+      // First get the logged-in school
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data: schoolData, error: schoolError } = await supabase
+        .from("schools")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+
+      if (schoolError) throw schoolError;
+      setSchool(schoolData);
+
+      // Get assigned activities for this school or chapter
+      const { data: assignments, error: assignError } = await supabase
+        .from("event_assignments")
+        .select("event_id, deadline")
+        .or(`school_id.eq.${schoolData.id},chapter_id.eq.${schoolData.chapter_id}`);
+
+      if (assignError) throw assignError;
+
+      const assignedEventIds = assignments?.map(a => a.event_id) || [];
+      
+      if (assignedEventIds.length === 0) {
+        setEvents([]);
+        return;
+      }
+
+      // Fetch only assigned events
       const { data, error } = await supabase
         .from("events")
         .select("*")
+        .in("id", assignedEventIds)
         .eq("status", "active")
         .order("start_date", { ascending: true });
 
       if (error) throw error;
-      setEvents(data || []);
+      
+      // Add deadline info to events
+      const eventsWithDeadlines = data.map(event => ({
+        ...event,
+        deadline: assignments?.find(a => a.event_id === event.id)?.deadline
+      }));
+      
+      setEvents(eventsWithDeadlines);
     } catch (error: any) {
       toast({
         title: "Error",

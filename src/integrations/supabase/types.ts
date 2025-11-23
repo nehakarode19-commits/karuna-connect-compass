@@ -177,6 +177,7 @@ export type Database = {
           assigned_date: string | null
           chapter_id: string | null
           created_at: string | null
+          deadline: string | null
           event_id: string
           id: string
           school_id: string | null
@@ -185,6 +186,7 @@ export type Database = {
           assigned_date?: string | null
           chapter_id?: string | null
           created_at?: string | null
+          deadline?: string | null
           event_id: string
           id?: string
           school_id?: string | null
@@ -193,6 +195,7 @@ export type Database = {
           assigned_date?: string | null
           chapter_id?: string | null
           created_at?: string | null
+          deadline?: string | null
           event_id?: string
           id?: string
           school_id?: string | null
