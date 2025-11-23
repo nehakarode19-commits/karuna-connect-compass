@@ -87,12 +87,24 @@ const SchoolEventSubmission = () => {
 
       if (submissionError) throw submissionError;
 
-      // Upload photos as media files
+      // Upload photos to storage
       for (const photo of photos) {
-        const photoUrl = URL.createObjectURL(photo);
+        const fileExt = photo.name.split('.').pop();
+        const fileName = `${user.id}/${submissionData.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('submission-media')
+          .upload(fileName, photo);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('submission-media')
+          .getPublicUrl(fileName);
+
         await supabase.from("media_files").insert({
           submission_id: submissionData.id,
-          file_url: photoUrl,
+          file_url: publicUrl,
           file_type: photo.type,
           file_size: photo.size,
         });
@@ -100,10 +112,22 @@ const SchoolEventSubmission = () => {
 
       // Upload video if present
       if (video) {
-        const videoUrl = URL.createObjectURL(video);
+        const fileExt = video.name.split('.').pop();
+        const fileName = `${user.id}/${submissionData.id}/video-${Date.now()}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('submission-media')
+          .upload(fileName, video);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('submission-media')
+          .getPublicUrl(fileName);
+
         await supabase.from("media_files").insert({
           submission_id: submissionData.id,
-          file_url: videoUrl,
+          file_url: publicUrl,
           file_type: video.type,
           file_size: video.size,
         });

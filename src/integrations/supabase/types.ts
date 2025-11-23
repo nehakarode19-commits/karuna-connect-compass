@@ -293,6 +293,8 @@ export type Database = {
       }
       events: {
         Row: {
+          attachments: Json | null
+          banner_url: string | null
           created_at: string | null
           created_by: string | null
           description: string | null
@@ -307,6 +309,8 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          attachments?: Json | null
+          banner_url?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
@@ -321,6 +325,8 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          attachments?: Json | null
+          banner_url?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
