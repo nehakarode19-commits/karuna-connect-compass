@@ -1,14 +1,13 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { SchoolLayout } from "./SchoolLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Calendar, MapPin, Upload, FileText, ArrowLeft, Clock, Users } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, FileText, Image as ImageIcon, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
 
 interface Activity {
   id: string;
@@ -17,12 +16,10 @@ interface Activity {
   start_date: string;
   end_date: string;
   location: string;
+  thumbnail_url: string | null;
+  banner_url: string | null;
+  attachments: any;
   status: string;
-  program_type_id: string;
-  program_types?: {
-    name: string;
-    code: string;
-  };
 }
 
 const SchoolActivityDetail = () => {
@@ -31,53 +28,25 @@ const SchoolActivityDetail = () => {
   const { toast } = useToast();
   const [activity, setActivity] = useState<Activity | null>(null);
   const [loading, setLoading] = useState(true);
-  const [hasSubmitted, setHasSubmitted] = useState(false);
 
   useEffect(() => {
-    fetchActivityDetail();
+    fetchActivity();
   }, [activityId]);
 
-  const fetchActivityDetail = async () => {
+  const fetchActivity = async () => {
     try {
-      const { data: activityData, error: activityError } = await supabase
+      const { data, error } = await supabase
         .from("events")
-        .select(`
-          *,
-          program_types (
-            name,
-            code
-          )
-        `)
+        .select("*")
         .eq("id", activityId)
         .single();
 
-      if (activityError) throw activityError;
-      setActivity(activityData);
-
-      // Check if school has already submitted
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: schoolData } = await supabase
-          .from("schools")
-          .select("id")
-          .eq("user_id", user.id)
-          .single();
-
-        if (schoolData) {
-          const { data: submissionData } = await supabase
-            .from("event_submissions")
-            .select("id")
-            .eq("event_id", activityId)
-            .eq("school_id", schoolData.id)
-            .maybeSingle();
-
-          setHasSubmitted(!!submissionData);
-        }
-      }
+      if (error) throw error;
+      setActivity(data);
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message,
+        description: "Failed to load activity details",
         variant: "destructive",
       });
     } finally {
@@ -88,8 +57,8 @@ const SchoolActivityDetail = () => {
   if (loading) {
     return (
       <SchoolLayout>
-        <div className="flex items-center justify-center h-96">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-muted-foreground">Loading...</div>
         </div>
       </SchoolLayout>
     );
@@ -99,10 +68,8 @@ const SchoolActivityDetail = () => {
     return (
       <SchoolLayout>
         <div className="text-center py-12">
-          <h2 className="text-2xl font-bold mb-2">Activity Not Found</h2>
-          <p className="text-muted-foreground mb-4">The activity you're looking for doesn't exist.</p>
-          <Button onClick={() => navigate("/school/activities")}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
+          <h2 className="text-2xl font-bold">Activity Not Found</h2>
+          <Button className="mt-4" onClick={() => navigate("/school/activities")}>
             Back to Activities
           </Button>
         </div>
@@ -110,163 +77,213 @@ const SchoolActivityDetail = () => {
     );
   }
 
-  const isUpcoming = new Date(activity.start_date) > new Date();
-  const isOngoing = new Date(activity.start_date) <= new Date() && new Date(activity.end_date) >= new Date();
-  const isPast = new Date(activity.end_date) < new Date();
-
   return (
     <SchoolLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <Button variant="ghost" onClick={() => navigate("/school/activities")}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Activities
+        <div className="flex items-center gap-4">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => navigate("/school/activities")}
+          >
+            <ArrowLeft className="h-4 w-4" />
           </Button>
-          {activity.status === "active" && !isPast && (
-            <Button 
-              onClick={() => navigate(`/school/submit/${activityId}`)}
-              disabled={hasSubmitted}
-              className="bg-gradient-hero"
-            >
-              <Upload className="w-4 h-4 mr-2" />
-              {hasSubmitted ? "Already Submitted" : "Submit Report"}
-            </Button>
-          )}
+          <div className="flex-1">
+            <h1 className="text-3xl font-bold">{activity.title}</h1>
+            <div className="flex items-center gap-4 mt-2 text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                <span>{new Date(activity.start_date).toLocaleDateString()}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <MapPin className="w-4 h-4" />
+                <span>{activity.location}</span>
+              </div>
+              <Badge>{activity.status}</Badge>
+            </div>
+          </div>
+          <Button 
+            onClick={() => navigate(`/school/activity/${activityId}/submit`)}
+            className="bg-gradient-hero"
+          >
+            Submit Report
+          </Button>
         </div>
 
-        <Card className="border-2">
-          <CardHeader className="space-y-4">
-            <div className="flex items-start justify-between">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Badge variant={isOngoing ? "default" : isUpcoming ? "secondary" : "outline"}>
-                    {isOngoing ? "Ongoing" : isUpcoming ? "Upcoming" : "Completed"}
-                  </Badge>
-                  {activity.program_types && (
-                    <Badge variant="outline">{activity.program_types.name}</Badge>
-                  )}
-                  {hasSubmitted && (
-                    <Badge className="bg-green-500">Submitted</Badge>
-                  )}
-                </div>
-                <CardTitle className="text-3xl">{activity.title}</CardTitle>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="prose prose-sm max-w-none">
-              <p className="text-muted-foreground">{activity.description}</p>
-            </div>
+        {activity.banner_url && (
+          <div className="aspect-[21/9] w-full rounded-lg overflow-hidden">
+            <img 
+              src={activity.banner_url} 
+              alt={activity.title}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
 
-            <Separator />
+        <Tabs defaultValue="overview" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="media">Media & Resources</TabsTrigger>
+            <TabsTrigger value="guidelines">Submission Guidelines</TabsTrigger>
+          </TabsList>
 
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <h3 className="font-semibold text-lg flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-primary" />
-                  Event Details
-                </h3>
-                
-                <div className="space-y-3">
-                  <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-                    <Calendar className="w-5 h-5 text-primary mt-0.5" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Start Date</p>
-                      <p className="text-sm text-muted-foreground">
-                        {format(new Date(activity.start_date), "PPP")}
-                      </p>
-                    </div>
+          <TabsContent value="overview" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="w-5 h-5" />
+                  Description
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-foreground whitespace-pre-wrap leading-relaxed">
+                  {activity.description}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Event Details</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Start Date</p>
+                    <p className="font-medium">{new Date(activity.start_date).toLocaleDateString('en-IN', { dateStyle: 'long' })}</p>
                   </div>
-
-                  <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-                    <Calendar className="w-5 h-5 text-primary mt-0.5" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">End Date</p>
-                      <p className="text-sm text-muted-foreground">
-                        {format(new Date(activity.end_date), "PPP")}
-                      </p>
-                    </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">End Date</p>
+                    <p className="font-medium">{new Date(activity.end_date).toLocaleDateString('en-IN', { dateStyle: 'long' })}</p>
                   </div>
-
-                  <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-                    <MapPin className="w-5 h-5 text-primary mt-0.5" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Location</p>
-                      <p className="text-sm text-muted-foreground">
-                        {activity.location || "Not specified"}
-                      </p>
-                    </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Location</p>
+                    <p className="font-medium">{activity.location}</p>
                   </div>
-
-                  <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-                    <Clock className="w-5 h-5 text-primary mt-0.5" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Duration</p>
-                      <p className="text-sm text-muted-foreground">
-                        {Math.ceil((new Date(activity.end_date).getTime() - new Date(activity.start_date).getTime()) / (1000 * 60 * 60 * 24))} days
-                      </p>
-                    </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Status</p>
+                    <Badge>{activity.status}</Badge>
                   </div>
                 </div>
-              </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-              <div className="space-y-4">
-                <h3 className="font-semibold text-lg flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-primary" />
-                  Submission Guidelines
-                </h3>
-                
-                <Card className="bg-gradient-to-br from-primary/5 to-secondary/5 border-primary/20">
-                  <CardContent className="p-4 space-y-3 text-sm">
-                    <div className="flex items-start gap-2">
-                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <span className="text-xs font-bold text-primary">1</span>
-                      </div>
-                      <p>Provide a detailed description of your activity (minimum 100 characters)</p>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <span className="text-xs font-bold text-primary">2</span>
-                      </div>
-                      <p>Upload photos showing student participation (at least 3 photos required)</p>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <span className="text-xs font-bold text-primary">3</span>
-                      </div>
-                      <p>Optional: Include supporting documents or certificates</p>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <span className="text-xs font-bold text-primary">4</span>
-                      </div>
-                      <p>Optional: Add publication details if featured in media</p>
-                    </div>
-                  </CardContent>
-                </Card>
+          <TabsContent value="media" className="space-y-6">
+            {activity.thumbnail_url && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ImageIcon className="w-5 h-5" />
+                    Activity Thumbnail
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <img 
+                    src={activity.thumbnail_url} 
+                    alt={activity.title}
+                    className="w-full rounded-lg"
+                  />
+                </CardContent>
+              </Card>
+            )}
 
-                {!hasSubmitted && activity.status === "active" && !isPast && (
-                  <Button 
-                    onClick={() => navigate(`/school/submit/${activityId}`)}
-                    className="w-full bg-gradient-hero"
-                    size="lg"
-                  >
-                    <Upload className="w-4 h-4 mr-2" />
-                    Submit Your Report
-                  </Button>
-                )}
-
-                {hasSubmitted && (
-                  <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20">
-                    <p className="text-sm text-green-700 dark:text-green-300 font-medium">
-                      ✓ You have already submitted a report for this activity
-                    </p>
+            {activity.attachments && Array.isArray(activity.attachments) && activity.attachments.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Download className="w-5 h-5" />
+                    Attachments & Resources
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {activity.attachments.map((attachment: any, index: number) => (
+                      <a
+                        key={index}
+                        href={attachment.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors"
+                      >
+                        <FileText className="w-5 h-5 text-primary" />
+                        <span className="flex-1">{attachment.name}</span>
+                        <Download className="w-4 h-4 text-muted-foreground" />
+                      </a>
+                    ))}
                   </div>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="guidelines" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Submission Requirements</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex gap-3">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold">
+                      1
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold mb-1">Detailed Description</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Provide at least 100 characters describing what was done, who participated, and the impact of the activity.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold">
+                      2
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold mb-1">Photo Documentation</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Upload at least 3 high-quality photos showing the activity in progress. Each photo should be maximum 5MB.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold">
+                      3
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold mb-1">Video Evidence (Optional)</h4>
+                      <p className="text-sm text-muted-foreground">
+                        You may upload a video file (max 100MB) showing highlights of the activity.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold">
+                      4
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold mb-1">Publication Details (Optional)</h4>
+                      <p className="text-sm text-muted-foreground">
+                        If the activity was covered by media, provide publication details including media name, date, and URL/scanned copy.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-primary/50 bg-primary/5">
+              <CardContent className="p-6">
+                <p className="text-sm text-muted-foreground">
+                  <strong>Note:</strong> All submissions will be reviewed by evaluators. Make sure to provide complete and accurate information for faster approval.
+                </p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </SchoolLayout>
   );

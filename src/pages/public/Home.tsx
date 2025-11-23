@@ -17,16 +17,7 @@ const Home = () => {
         </div>
         
         <div className="relative z-10 text-center px-4 max-w-5xl mx-auto py-20">
-          {/* Logo with animation */}
-          <div className="mb-8 animate-fade-in">
-            <img 
-              src={logo} 
-              alt="Karuna International" 
-              className="h-32 mx-auto mb-6 drop-shadow-2xl animate-scale-in"
-            />
-          </div>
-          
-          <div className="space-y-6 animate-fade-in" style={{ animationDelay: "0.2s" }}>
+          <div className="space-y-6 animate-fade-in">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full text-sm border border-white/20">
               <Sparkles className="w-4 h-4" />
               <span>Transforming Lives Through Compassion</span>

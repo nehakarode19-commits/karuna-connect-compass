@@ -29,6 +29,7 @@ import AdminActivity from "./pages/admin/AdminActivity";
 import AdminStudents from "./pages/admin/AdminStudents";
 import AdminDonations from "./pages/admin/AdminDonations";
 import AdminReports from "./pages/admin/AdminReports";
+import AdminCertificates from "./pages/admin/AdminCertificates";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminSchoolApproval from "./pages/admin/AdminSchoolApproval";
 import AdminSubmissions from "./pages/admin/AdminSubmissions";
@@ -106,7 +107,8 @@ function App() {
               <Route path="/admin/activity/:activityId" element={<AdminActivityDetail />} />
               <Route path="/admin/students" element={<AdminStudents />} />
               <Route path="/admin/donations" element={<AdminDonations />} />
-              <Route path="/admin/reports" element={<AdminReports />} />
+          <Route path="/admin/reports" element={<AdminReports />} />
+          <Route path="/admin/certificates" element={<AdminCertificates />} />
               <Route path="/admin/settings" element={<AdminSettings />} />
               <Route path="/evaluator/dashboard" element={<EvaluatorDashboard />} />
               <Route path="/evaluator/submissions" element={<EvaluatorSubmissions />} />

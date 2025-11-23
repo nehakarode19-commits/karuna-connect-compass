@@ -4,10 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Plus, CalendarIcon, Loader2 } from "lucide-react";
+import { Plus, CalendarIcon, Loader2, Upload, X } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,12 +21,30 @@ export function CreateActivityDialog() {
     title: "",
     description: "",
     location: "",
-    program_type_id: "",
-    thumbnail_url: "",
   });
   
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [attachments, setAttachments] = useState<File[]>([]);
+
+  const uploadFile = async (file: File, bucket: string, folder: string) => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .upload(fileName, file);
+
+    if (error) throw error;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from(bucket)
+      .getPublicUrl(fileName);
+
+    return publicUrl;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,6 +63,26 @@ export function CreateActivityDialog() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
+      let thumbnailUrl = null;
+      let bannerUrl = null;
+      const attachmentUrls = [];
+
+      // Upload thumbnail
+      if (thumbnailFile) {
+        thumbnailUrl = await uploadFile(thumbnailFile, 'activity-media', 'thumbnails');
+      }
+
+      // Upload banner
+      if (bannerFile) {
+        bannerUrl = await uploadFile(bannerFile, 'activity-media', 'banners');
+      }
+
+      // Upload attachments
+      for (const file of attachments) {
+        const url = await uploadFile(file, 'activity-media', 'attachments');
+        attachmentUrls.push({ name: file.name, url });
+      }
+
       const { error } = await supabase
         .from("events")
         .insert({
@@ -54,8 +91,9 @@ export function CreateActivityDialog() {
           location: formData.location,
           start_date: startDate.toISOString(),
           end_date: endDate.toISOString(),
-          thumbnail_url: formData.thumbnail_url || null,
-          program_type_id: formData.program_type_id || null,
+          thumbnail_url: thumbnailUrl,
+          banner_url: bannerUrl,
+          attachments: attachmentUrls,
           created_by: user?.id,
           status: "active",
         });
@@ -68,15 +106,12 @@ export function CreateActivityDialog() {
       });
       
       setOpen(false);
-      setFormData({
-        title: "",
-        description: "",
-        location: "",
-        program_type_id: "",
-        thumbnail_url: "",
-      });
+      setFormData({ title: "", description: "", location: "" });
       setStartDate(undefined);
       setEndDate(undefined);
+      setThumbnailFile(null);
+      setBannerFile(null);
+      setAttachments([]);
       
       window.location.reload();
     } catch (error: any) {
@@ -93,16 +128,16 @@ export function CreateActivityDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-soft">
+        <Button className="gap-2 bg-gradient-to-r from-primary to-primary/80">
           <Plus className="w-4 h-4" />
           Create New Activity
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl">Create New Activity</DialogTitle>
           <DialogDescription>
-            Add a new activity or event for schools to participate in
+            Add a new activity with details, dates, and media files
           </DialogDescription>
         </DialogHeader>
         
@@ -125,7 +160,7 @@ export function CreateActivityDialog() {
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Describe the activity, its objectives, and what schools need to do"
+                placeholder="Describe the activity objectives and requirements"
                 rows={4}
                 required
               />
@@ -191,19 +226,58 @@ export function CreateActivityDialog() {
                 id="location"
                 value={formData.location}
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                placeholder="e.g., All Schools, School Campus, Community"
+                placeholder="e.g., All Schools, School Campus"
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="thumbnail">Thumbnail URL (optional)</Label>
+              <Label htmlFor="thumbnail">Thumbnail Image</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="thumbnail"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setThumbnailFile(e.target.files?.[0] || null)}
+                />
+                {thumbnailFile && (
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setThumbnailFile(null)}>
+                    <X className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="banner">Banner Image</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="banner"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setBannerFile(e.target.files?.[0] || null)}
+                />
+                {bannerFile && (
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setBannerFile(null)}>
+                    <X className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="attachments">Attachments (Guidelines, Forms, etc.)</Label>
               <Input
-                id="thumbnail"
-                value={formData.thumbnail_url}
-                onChange={(e) => setFormData({ ...formData, thumbnail_url: e.target.value })}
-                placeholder="https://example.com/image.jpg"
+                id="attachments"
+                type="file"
+                multiple
+                onChange={(e) => setAttachments(Array.from(e.target.files || []))}
               />
+              {attachments.length > 0 && (
+                <div className="text-sm text-muted-foreground">
+                  {attachments.length} file(s) selected
+                </div>
+              )}
             </div>
           </div>
 
@@ -218,7 +292,10 @@ export function CreateActivityDialog() {
                   Creating...
                 </>
               ) : (
-                "Create Activity"
+                <>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Create Activity
+                </>
               )}
             </Button>
           </DialogFooter>
