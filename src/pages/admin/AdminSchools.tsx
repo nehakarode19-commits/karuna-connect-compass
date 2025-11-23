@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AdminLayout } from "./AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, MapPin, Phone, Mail } from "lucide-react";
+import { Plus, Search, MapPin, Phone, Mail, Edit, Trash2, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 interface School {
   id: string;
@@ -13,111 +16,109 @@ interface School {
   principal_name: string;
   contact_number: string;
   email: string;
-  chapter: string;
-  active_students: number;
-  submissions: number;
+  kendra_name: string;
+  chapter_id?: string;
 }
 
-const mockSchools: School[] = [
-  {
-    id: "1",
-    kc_no: "AHM-001",
-    school_name: "St. Xavier's High School",
-    principal_name: "Dr. Rajesh Kumar",
-    contact_number: "+91 98765 43210",
-    email: "principal@stxaviers.edu",
-    chapter: "Ahmedabad",
-    active_students: 450,
-    submissions: 12
-  },
-  {
-    id: "2",
-    kc_no: "AHM-002",
-    school_name: "Delhi Public School",
-    principal_name: "Mrs. Priya Sharma",
-    contact_number: "+91 98765 43211",
-    email: "admin@dpsahmedabad.org",
-    chapter: "Ahmedabad",
-    active_students: 520,
-    submissions: 15
-  },
-  {
-    id: "3",
-    kc_no: "NSK-001",
-    school_name: "Kendriya Vidyalaya Nashik",
-    principal_name: "Mr. Suresh Patil",
-    contact_number: "+91 98765 43212",
-    email: "kv.nashik@gmail.com",
-    chapter: "Nashik",
-    active_students: 380,
-    submissions: 10
-  },
-  {
-    id: "4",
-    kc_no: "PUN-001",
-    school_name: "Bishops School",
-    principal_name: "Dr. Anjali Mehta",
-    contact_number: "+91 98765 43213",
-    email: "principal@bishops.ac.in",
-    chapter: "Pune",
-    active_students: 600,
-    submissions: 18
-  },
-  {
-    id: "5",
-    kc_no: "MUM-001",
-    school_name: "Campion School",
-    principal_name: "Fr. Anthony D'Souza",
-    contact_number: "+91 98765 43214",
-    email: "office@campion.edu.in",
-    chapter: "Mumbai",
-    active_students: 480,
-    submissions: 14
-  },
-  {
-    id: "6",
-    kc_no: "AHM-003",
-    school_name: "Ryan International School",
-    principal_name: "Ms. Kavita Desai",
-    contact_number: "+91 98765 43215",
-    email: "ryan.ahm@ryangroup.org",
-    chapter: "Ahmedabad",
-    active_students: 420,
-    submissions: 11
-  },
-  {
-    id: "7",
-    kc_no: "DEL-001",
-    school_name: "Sanskriti School Delhi",
-    principal_name: "Mr. Ramesh Chand",
-    contact_number: "+91 98765 43216",
-    email: "info@sanskritischool.edu.in",
-    chapter: "Delhi",
-    active_students: 550,
-    submissions: 16
-  },
-  {
-    id: "8",
-    kc_no: "PUN-002",
-    school_name: "Symbiosis International School",
-    principal_name: "Dr. Meera Joshi",
-    contact_number: "+91 98765 43217",
-    email: "sis@symbiosis.ac.in",
-    chapter: "Pune",
-    active_students: 490,
-    submissions: 13
-  }
-];
+interface Stats {
+  totalSchools: number;
+  totalStudents: number;
+  totalSubmissions: number;
+  totalChapters: number;
+}
 
 const AdminSchools = () => {
-  const [schools] = useState<School[]>(mockSchools);
+  const [schools, setSchools] = useState<School[]>([]);
+  const [stats, setStats] = useState<Stats>({
+    totalSchools: 0,
+    totalStudents: 0,
+    totalSubmissions: 0,
+    totalChapters: 0
+  });
   const [searchTerm, setSearchTerm] = useState("");
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    fetchSchools();
+    fetchStats();
+  }, []);
+
+  const fetchSchools = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("schools")
+        .select("*")
+        .eq("status", "approved")
+        .order("school_name");
+
+      if (error) throw error;
+      setSchools(data || []);
+    } catch (error: any) {
+      toast({
+        title: "Error fetching schools",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchStats = async () => {
+    try {
+      const [schoolsCount, studentsCount, submissionsCount, chaptersCount] = await Promise.all([
+        supabase.from("schools").select("id", { count: "exact", head: true }),
+        supabase.from("students").select("id", { count: "exact", head: true }),
+        supabase.from("event_submissions").select("id", { count: "exact", head: true }),
+        supabase.from("chapters").select("id", { count: "exact", head: true })
+      ]);
+
+      setStats({
+        totalSchools: schoolsCount.count || 0,
+        totalStudents: studentsCount.count || 0,
+        totalSubmissions: submissionsCount.count || 0,
+        totalChapters: chaptersCount.count || 0
+      });
+    } catch (error: any) {
+      console.error("Error fetching stats:", error);
+    }
+  };
+
+  const handleDeleteSchool = async (schoolId: string, schoolName: string) => {
+    if (!confirm(`Are you sure you want to delete ${schoolName}? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("schools")
+        .delete()
+        .eq("id", schoolId);
+
+      if (error) throw error;
+
+      toast({
+        title: "School deleted successfully",
+      });
+      fetchSchools();
+      fetchStats();
+    } catch (error: any) {
+      toast({
+        title: "Error deleting school",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   const filteredSchools = schools.filter(
     (school) =>
       school.school_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       school.kc_no.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      school.chapter.toLowerCase().includes(searchTerm.toLowerCase())
+      school.kendra_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -127,10 +128,10 @@ const AdminSchools = () => {
           <div>
             <h1 className="text-3xl font-bold">Schools Management</h1>
             <p className="text-muted-foreground mt-1">
-              Manage all Karuna Clubs • {schools.length} schools • 3,850 active students
+              Manage all Karuna Clubs • {stats.totalSchools} schools • {stats.totalStudents} active students
             </p>
           </div>
-          <Button className="gap-2 bg-gradient-hero border-0">
+          <Button className="gap-2 bg-gradient-hero border-0" onClick={() => navigate("/admin/school-approval")}>
             <Plus className="w-4 h-4" />
             Add School
           </Button>
@@ -140,19 +141,19 @@ const AdminSchools = () => {
           <CardContent className="p-6">
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
               <div className="text-center p-4 bg-blue-500/10 rounded-lg">
-                <div className="text-3xl font-bold text-blue-600">8</div>
+                <div className="text-3xl font-bold text-blue-600">{stats.totalSchools}</div>
                 <div className="text-sm text-muted-foreground mt-1">Total Schools</div>
               </div>
               <div className="text-center p-4 bg-green-500/10 rounded-lg">
-                <div className="text-3xl font-bold text-green-600">3,850</div>
+                <div className="text-3xl font-bold text-green-600">{stats.totalStudents}</div>
                 <div className="text-sm text-muted-foreground mt-1">Active Students</div>
               </div>
               <div className="text-center p-4 bg-purple-500/10 rounded-lg">
-                <div className="text-3xl font-bold text-purple-600">109</div>
+                <div className="text-3xl font-bold text-purple-600">{stats.totalSubmissions}</div>
                 <div className="text-sm text-muted-foreground mt-1">Total Submissions</div>
               </div>
               <div className="text-center p-4 bg-orange-500/10 rounded-lg">
-                <div className="text-3xl font-bold text-orange-600">5</div>
+                <div className="text-3xl font-bold text-orange-600">{stats.totalChapters}</div>
                 <div className="text-sm text-muted-foreground mt-1">Chapters</div>
               </div>
             </div>
@@ -163,7 +164,7 @@ const AdminSchools = () => {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Search by school name, KC No, or chapter..."
+              placeholder="Search by school name, KC No, or kendra..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -171,10 +172,24 @@ const AdminSchools = () => {
           </div>
         </div>
 
-        {filteredSchools.length === 0 ? (
+        {loading ? (
           <Card>
-            <CardContent className="py-12 text-center">
-              <p className="text-muted-foreground">No schools found matching your search</p>
+            <CardContent className="py-12 flex justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </CardContent>
+          </Card>
+        ) : filteredSchools.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center space-y-4">
+              <p className="text-muted-foreground">
+                {searchTerm ? "No schools found matching your search" : "No schools registered yet"}
+              </p>
+              {!searchTerm && (
+                <Button onClick={() => navigate("/admin/school-approval")} className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  Add First School
+                </Button>
+              )}
             </CardContent>
           </Card>
         ) : (
@@ -198,7 +213,7 @@ const AdminSchools = () => {
                       </p>
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <MapPin className="w-4 h-4 shrink-0" />
-                        <span>{school.chapter} Chapter</span>
+                        <span>{school.kendra_name}</span>
                       </div>
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Phone className="w-4 h-4 shrink-0" />
@@ -210,16 +225,23 @@ const AdminSchools = () => {
                       </div>
                     </div>
 
-                    <div className="pt-3 border-t flex justify-between text-sm">
-                      <div>
-                        <div className="font-semibold text-foreground">{school.active_students}</div>
-                        <div className="text-muted-foreground text-xs">Students</div>
-                      </div>
-                      <div>
-                        <div className="font-semibold text-foreground">{school.submissions}</div>
-                        <div className="text-muted-foreground text-xs">Submissions</div>
-                      </div>
-                      <Button size="sm" variant="outline">View Details</Button>
+                    <div className="pt-3 border-t flex gap-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="flex-1"
+                        onClick={() => navigate(`/admin/school-approval`)}
+                      >
+                        <Edit className="w-3 h-3 mr-1" />
+                        Edit
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="destructive"
+                        onClick={() => handleDeleteSchool(school.id, school.school_name)}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
