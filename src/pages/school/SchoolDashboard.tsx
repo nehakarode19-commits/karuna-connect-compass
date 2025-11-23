@@ -44,12 +44,17 @@ const SchoolDashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
+      if (!user?.id) {
+        setLoading(false);
+        return;
+      }
+
       // Fetch school data
       const { data: school, error: schoolError } = await supabase
         .from("schools")
         .select("*")
-        .eq("user_id", user?.id)
-        .single();
+        .eq("user_id", user.id)
+        .maybeSingle();
 
       if (schoolError) throw schoolError;
       setSchoolData(school);
