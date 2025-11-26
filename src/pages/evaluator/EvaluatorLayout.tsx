@@ -22,22 +22,24 @@ export function EvaluatorLayout({ children }: EvaluatorLayoutProps) {
   const { user, userRole } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (!user) {
-      navigate("/");
-    } else if (userRole !== "evaluator") {
-      navigate("/");
-    }
-  }, [user, userRole, navigate]);
+  // DEMO MODE: Authentication check disabled for client presentation
+  // useEffect(() => {
+  //   if (!user) {
+  //     navigate("/");
+  //   } else if (userRole !== "evaluator") {
+  //     navigate("/");
+  //   }
+  // }, [user, userRole, navigate]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate("/");
   };
 
-  if (!user || userRole !== "evaluator") {
-    return null;
-  }
+  // DEMO MODE: Removed authentication guard for client presentation
+  // if (!user || userRole !== "evaluator") {
+  //   return null;
+  // }
 
   return (
     <SidebarProvider>
