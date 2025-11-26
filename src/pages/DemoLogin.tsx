@@ -2,35 +2,138 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { Shield, School, ArrowRight, Zap } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
 
 const DemoLogin = () => {
   const navigate = useNavigate();
+  const { signIn, signUp } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState<string | null>(null);
 
-  const handleQuickLogin = (role: "admin" | "school" | "evaluator") => {
+  const handleQuickLogin = async (role: "admin" | "school" | "evaluator") => {
     setLoading(role);
+    
+    try {
+      const credentials = {
+        admin: {
+          email: "admin@universal-software.com",
+          password: "123456",
+          fullName: "Admin User"
+        },
+        school: {
+          email: "school@demo.com",
+          password: "123456",
+          fullName: "Demo School"
+        },
+        evaluator: {
+          email: "evaluator@demo.com",
+          password: "123456",
+          fullName: "Demo Evaluator"
+        }
+      };
 
-    const roleLabel =
-      role === "admin" ? "Administrator" : role === "evaluator" ? "Evaluator" : "School";
+      const { email, password, fullName } = credentials[role];
+      
+      // Step 1: Show we're starting
+      toast({
+        title: "Step 1: Authenticating",
+        description: `Checking credentials for ${email}...`,
+      });
 
-    toast({
-      title: "Demo Login",
-      description: `Opening ${roleLabel} portal (demo view, authentication skipped)`,
-    });
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      // Try to sign in first
+      let { error: signInError } = await signIn(email, password);
+      
+      // If user doesn't exist, create account
+      if (signInError?.message?.includes("Invalid login credentials")) {
+        toast({
+          title: "Step 2: Creating Demo Account",
+          description: "Setting up your demo account with dummy data...",
+        });
 
-    navigate(
-      role === "admin"
-        ? "/admin/dashboard"
-        : role === "evaluator"
-          ? "/evaluator/dashboard"
-          : "/school/dashboard",
-    );
+        await new Promise(resolve => setTimeout(resolve, 800));
 
-    // Small delay so button state resets after navigation
-    setTimeout(() => setLoading(null), 300);
+        const { error: signUpError } = await signUp(email, password, fullName);
+        if (signUpError) throw signUpError;
+
+        // Sign in after creating account
+        const { error: newSignInError } = await signIn(email, password);
+        if (newSignInError) throw newSignInError;
+
+        toast({
+          title: "Step 3: Setting Up Role",
+          description: `Assigning ${role} permissions...`,
+        });
+
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        // Set role for the new user
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase.from("user_roles").insert({
+            user_id: user.id,
+            role: role === "admin" ? "admin" : role === "evaluator" ? "evaluator" : "school_admin"
+          });
+
+          // If school, create school profile
+          if (role === "school") {
+            toast({
+              title: "Step 4: Creating School Profile",
+              description: "Adding school details with dummy data...",
+            });
+
+            await new Promise(resolve => setTimeout(resolve, 800));
+
+            await supabase.from("profiles").upsert({
+              id: user.id,
+              email: user.email!,
+              full_name: fullName
+            });
+
+            await supabase.from("schools").insert({
+              user_id: user.id,
+              kc_no: "DEMO001",
+              school_name: "Demo School",
+              principal_name: "Demo Principal",
+              contact_number: "+91 9876543210",
+              email: user.email!,
+              kendra_name: "Demo Kendra",
+              status: "approved",
+              onboarding_completed: true
+            });
+          }
+        }
+      } else if (signInError) {
+        throw signInError;
+      } else {
+        toast({
+          title: "Step 2: Account Found",
+          description: "Logging in with existing demo account...",
+        });
+        await new Promise(resolve => setTimeout(resolve, 800));
+      }
+
+      toast({
+        title: "✓ Login Successful",
+        description: `Welcome! Redirecting to ${role === "admin" ? "Administrator" : role === "evaluator" ? "Evaluator" : "School"} portal...`,
+      });
+
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      navigate(role === "admin" ? "/admin/dashboard" : role === "evaluator" ? "/evaluator/dashboard" : "/school/dashboard");
+    } catch (error: any) {
+      toast({
+        title: "Login Failed",
+        description: error.message || "Please try again",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(null);
+    }
   };
 
   return (
