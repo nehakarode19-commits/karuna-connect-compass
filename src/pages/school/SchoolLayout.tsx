@@ -20,11 +20,12 @@ export function SchoolLayout({ children }: SchoolLayoutProps) {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (!user) {
-      navigate("/school/auth");
-    }
-  }, [user, navigate]);
+  // DEMO MODE: Authentication check disabled for client presentation
+  // useEffect(() => {
+  //   if (!user) {
+  //     navigate("/school/auth");
+  //   }
+  // }, [user, navigate]);
 
   const handleLogout = async () => {
     await signOut();
