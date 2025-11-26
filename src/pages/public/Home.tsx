@@ -8,13 +8,7 @@ const Home = () => {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="relative min-h-[700px] bg-gradient-hero flex items-center justify-center text-white overflow-hidden">
-        {/* Animated background elements */}
-        <div className="absolute inset-0">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-primary/20 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-secondary/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "1s" }} />
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background/30" />
-        </div>
+      <section className="relative min-h-[700px] bg-primary flex items-center justify-center text-white overflow-hidden">
         
         <div className="relative z-10 text-center px-4 max-w-5xl mx-auto py-20">
           <div className="space-y-6 animate-fade-in">
@@ -182,7 +176,7 @@ const Home = () => {
       </section>
 
       {/* Stats Section */}
-      <section className="py-20 bg-gradient-accent text-white">
+      <section className="py-20 bg-secondary text-white">
         <div className="container mx-auto px-4">
           <div className="grid md:grid-cols-4 gap-8 text-center">
             <div>
