@@ -146,11 +146,22 @@ const AdminLogin = () => {
               </Button>
             </form>
 
-            <div className="mt-6 p-4 bg-muted rounded-lg">
+            <div className="mt-6 p-4 bg-muted rounded-lg space-y-2">
               <p className="text-sm text-muted-foreground text-center">
                 <Shield className="w-4 h-4 inline mr-1" />
                 This portal is restricted to authorized administrators
               </p>
+              <div className="pt-2 border-t border-border">
+                <p className="text-xs text-muted-foreground text-center font-medium">
+                  Demo Admin Credentials:
+                </p>
+                <p className="text-xs text-muted-foreground text-center mt-1">
+                  Email: admin@universal-software.com
+                </p>
+                <p className="text-xs text-muted-foreground text-center">
+                  Password: 123456
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
