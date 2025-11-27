@@ -131,7 +131,7 @@ const AdminSchools = () => {
               Manage all Karuna Clubs • {stats.totalSchools} schools • {stats.totalStudents} active students
             </p>
           </div>
-          <Button className="gap-2 bg-gradient-hero border-0" onClick={() => navigate("/admin/school-approval")}>
+          <Button className="gap-2 bg-gradient-hero border-0" onClick={() => navigate("/admin/school-approvals")}>
             <Plus className="w-4 h-4" />
             Add School
           </Button>
@@ -185,7 +185,7 @@ const AdminSchools = () => {
                 {searchTerm ? "No schools found matching your search" : "No schools registered yet"}
               </p>
               {!searchTerm && (
-                <Button onClick={() => navigate("/admin/school-approval")} className="gap-2">
+                <Button onClick={() => navigate("/admin/school-approvals")} className="gap-2">
                   <Plus className="w-4 h-4" />
                   Add First School
                 </Button>
@@ -230,7 +230,7 @@ const AdminSchools = () => {
                         size="sm" 
                         variant="outline" 
                         className="flex-1"
-                        onClick={() => navigate(`/admin/school-approval`)}
+                        onClick={() => navigate(`/admin/school-approvals`)}
                       >
                         <Edit className="w-3 h-3 mr-1" />
                         Edit
