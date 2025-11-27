@@ -5,6 +5,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { SchoolSidebar } from "@/components/school/SchoolSidebar";
 import { Button } from "@/components/ui/button";
 import { Bell, User } from "lucide-react";
+import karunaLogo from "@/assets/karuna-logo.png";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,8 +39,11 @@ export function SchoolLayout({ children }: SchoolLayoutProps) {
         <SchoolSidebar />
 
         <div className="flex-1 flex flex-col">
-          <header className="h-16 border-b border-border bg-background sticky top-0 z-40 flex items-center justify-between px-6">
-            <SidebarTrigger />
+          <header className="h-16 border-b border-border bg-background sticky top-0 z-40 flex items-center justify-between px-6 shadow-soft">
+            <div className="flex items-center gap-4">
+              <SidebarTrigger />
+              <img src={karunaLogo} alt="Karuna International" className="h-10 w-auto hidden md:block" />
+            </div>
 
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="icon">
