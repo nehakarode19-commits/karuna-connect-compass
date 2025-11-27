@@ -20,6 +20,15 @@ interface Event {
   status: string;
 }
 
+const PROGRAM_CATEGORIES = [
+  { id: "A", name: "Intra School Programmes", color: "bg-blue-500" },
+  { id: "B", name: "Inter School Programmes", color: "bg-green-500" },
+  { id: "C", name: "Inter-School Competitions", color: "bg-purple-500" },
+  { id: "D", name: "Public Relation Programmes", color: "bg-orange-500" },
+  { id: "E", name: "Club Internal/External Growth", color: "bg-pink-500" },
+  { id: "F", name: "National Level Programme", color: "bg-red-500" },
+];
+
 const SchoolActivities = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -27,6 +36,7 @@ const SchoolActivities = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [school, setSchool] = useState<any>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   useEffect(() => {
     fetchSchoolAndEvents();
@@ -97,16 +107,49 @@ const SchoolActivities = () => {
 
   return (
     <SchoolLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
-              Available Activities
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Browse and participate in Karuna activities
-            </p>
-          </div>
+      <div className="space-y-6 p-4 md:p-0">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold">
+            Activity Categories
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Choose a category and submit your highlights
+          </p>
+        </div>
+
+        {/* Category Cards - Mobile First */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {PROGRAM_CATEGORIES.map((category) => (
+            <Card
+              key={category.id}
+              className="overflow-hidden hover:shadow-medium transition-all cursor-pointer border-2 hover:border-primary"
+              onClick={() => setSelectedCategory(category.id)}
+            >
+              <div className={`h-2 ${category.color}`} />
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between mb-3">
+                  <Badge variant="outline" className="text-lg font-bold">
+                    {category.id}
+                  </Badge>
+                  <Badge variant="secondary">Active</Badge>
+                </div>
+                <h3 className="font-semibold text-lg mb-2">{category.name}</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Click to view and submit reports
+                </p>
+                <Button 
+                  className="w-full gap-2"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate("/school/activities");
+                  }}
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Highlights
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         <Card className="shadow-medium border-border/50">
