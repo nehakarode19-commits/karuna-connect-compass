@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, MapPin, Plus, Clock, CheckCircle, AlertCircle, XCircle, TrendingUp, FileText } from "lucide-react";
+import { Calendar, MapPin, Plus, Clock, CheckCircle, AlertCircle, XCircle, TrendingUp } from "lucide-react";
 import { SchoolLayout } from "./SchoolLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -130,79 +130,58 @@ const SchoolDashboard = () => {
 
   return (
     <SchoolLayout>
-      <div className="space-y-6 p-4 md:p-0">
-        {/* Welcome Header */}
-        <div className="bg-gradient-hero text-primary-foreground p-6 md:p-8 rounded-xl shadow-medium">
-          <h1 className="text-2xl md:text-3xl font-bold mb-2">
-            Welcome, {schoolData?.school_name || "School"}!
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+            Welcome Back!
           </h1>
-          <p className="text-primary-foreground/90">
-            Track your activities and manage submissions
+          <p className="text-muted-foreground mt-1">
+            View your activities and manage your school profile
           </p>
         </div>
 
-        {/* Quick Action Buttons - Mobile First */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Button 
-            onClick={() => navigate("/school/activities")}
-            className="h-auto py-6 flex-col gap-2 bg-gradient-hero border-0 shadow-medium hover:shadow-strong transition-shadow"
-          >
-            <Calendar className="w-8 h-8" />
-            <span className="text-base font-semibold">View Activities</span>
-          </Button>
-          <Button 
-            onClick={() => navigate("/school/activities")}
-            variant="outline"
-            className="h-auto py-6 flex-col gap-2 border-2 hover:border-primary hover:bg-primary/5"
-          >
-            <Plus className="w-8 h-8" />
-            <span className="text-base font-semibold">Submit Report</span>
-          </Button>
-          <Button 
-            onClick={() => navigate("/school/submissions")}
-            variant="outline"
-            className="h-auto py-6 flex-col gap-2 border-2 hover:border-primary hover:bg-primary/5"
-          >
-            <FileText className="w-8 h-8" />
-            <span className="text-base font-semibold">My Submissions</span>
-          </Button>
-        </div>
-
-        {/* Summary Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="shadow-medium border-border/50">
-            <CardContent className="p-4 md:p-6">
-              <div className="text-center">
-                <TrendingUp className="h-8 w-8 text-primary mx-auto mb-2" />
-                <p className="text-2xl md:text-3xl font-bold text-primary">{stats.total}</p>
-                <p className="text-xs md:text-sm text-muted-foreground mt-1">Total</p>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <Card className="shadow-medium border-border/50 hover:shadow-lg transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-muted-foreground text-sm font-medium mb-2">Total Submissions</h3>
+                  <p className="text-3xl font-bold text-primary">{stats.total}</p>
+                </div>
+                <TrendingUp className="h-8 w-8 text-primary/50" />
               </div>
             </CardContent>
           </Card>
-          <Card className="shadow-medium border-border/50">
-            <CardContent className="p-4 md:p-6">
-              <div className="text-center">
-                <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
-                <p className="text-2xl md:text-3xl font-bold text-green-600">{stats.approved}</p>
-                <p className="text-xs md:text-sm text-muted-foreground mt-1">Approved</p>
+          <Card className="shadow-medium border-border/50 hover:shadow-lg transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-muted-foreground text-sm font-medium mb-2">Approved</h3>
+                  <p className="text-3xl font-bold text-green-600">{stats.approved}</p>
+                </div>
+                <CheckCircle className="h-8 w-8 text-green-500/50" />
               </div>
             </CardContent>
           </Card>
-          <Card className="shadow-medium border-border/50">
-            <CardContent className="p-4 md:p-6">
-              <div className="text-center">
-                <Clock className="h-8 w-8 text-yellow-600 mx-auto mb-2" />
-                <p className="text-2xl md:text-3xl font-bold text-yellow-600">{stats.pending}</p>
-                <p className="text-xs md:text-sm text-muted-foreground mt-1">Pending</p>
+          <Card className="shadow-medium border-border/50 hover:shadow-lg transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-muted-foreground text-sm font-medium mb-2">Pending Review</h3>
+                  <p className="text-3xl font-bold text-yellow-600">{stats.pending}</p>
+                </div>
+                <Clock className="h-8 w-8 text-yellow-500/50" />
               </div>
             </CardContent>
           </Card>
-          <Card className="shadow-medium border-border/50">
-            <CardContent className="p-4 md:p-6">
-              <div className="text-center">
-                <Calendar className="h-8 w-8 text-primary mx-auto mb-2" />
-                <p className="text-2xl md:text-3xl font-bold text-primary">{events.length}</p>
-                <p className="text-xs md:text-sm text-muted-foreground mt-1">Activities</p>
+          <Card className="shadow-medium border-border/50 hover:shadow-lg transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-muted-foreground text-sm font-medium mb-2">Active Events</h3>
+                  <p className="text-3xl font-bold text-primary">{events.length}</p>
+                </div>
+                <Calendar className="h-8 w-8 text-primary/50" />
               </div>
             </CardContent>
           </Card>
