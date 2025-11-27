@@ -20,12 +20,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const { user, userRole, signOut } = useAuth();
   const navigate = useNavigate();
 
-  // DEMO MODE: Authentication check disabled for client presentation
-  // useEffect(() => {
-  //   if (!user || userRole !== "admin") {
-  //     navigate("/");
-  //   }
-  // }, [user, userRole, navigate]);
+  useEffect(() => {
+    if (!user || userRole !== "admin") {
+      navigate("/");
+    }
+  }, [user, userRole, navigate]);
 
   const handleLogout = async () => {
     await signOut();

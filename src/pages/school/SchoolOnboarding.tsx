@@ -9,6 +9,22 @@ import { GraduationCap, InfoIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { z } from "zod";
+
+const schoolSchema = z.object({
+  kcNo: z.string().trim().min(1, { message: "KC No is required" }).max(50, { message: "KC No too long" }),
+  schoolName: z.string().trim().min(2, { message: "School name must be at least 2 characters" }).max(200, { message: "School name too long" }),
+  principalName: z.string().trim().min(2, { message: "Principal name must be at least 2 characters" }).max(100, { message: "Principal name too long" }),
+  contactNumber: z.string().regex(/^[0-9]{10}$/, { message: "Contact number must be exactly 10 digits" }),
+  email: z.string().trim().email({ message: "Invalid email address" }).max(255, { message: "Email too long" }),
+  kendraName: z.string().trim().min(2, { message: "Kendra name must be at least 2 characters" }).max(200, { message: "Kendra name too long" })
+});
+
+const teacherSchema = z.object({
+  name: z.string().trim().min(2, { message: "Teacher name must be at least 2 characters" }).max(100, { message: "Teacher name too long" }),
+  mobile: z.string().regex(/^[0-9]{10}$/, { message: "Mobile number must be exactly 10 digits" }),
+  email: z.string().trim().email({ message: "Invalid email address" }).max(255, { message: "Email too long" })
+});
 
 const SchoolOnboarding = () => {
   const navigate = useNavigate();
@@ -37,16 +53,19 @@ const SchoolOnboarding = () => {
     setLoading(true);
 
     try {
+      // Validate input
+      const validated = schoolSchema.parse(schoolData);
+      
       const { error } = await supabase
         .from("schools")
         .insert({
           user_id: user?.id,
-          kc_no: schoolData.kcNo,
-          school_name: schoolData.schoolName,
-          principal_name: schoolData.principalName,
-          contact_number: schoolData.contactNumber,
-          email: schoolData.email,
-          kendra_name: schoolData.kendraName,
+          kc_no: validated.kcNo,
+          school_name: validated.schoolName,
+          principal_name: validated.principalName,
+          contact_number: validated.contactNumber,
+          email: validated.email,
+          kendra_name: validated.kendraName,
           status: 'approved',
           onboarding_completed: false
         });
@@ -59,11 +78,19 @@ const SchoolOnboarding = () => {
       });
       setStep(2);
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      if (error instanceof z.ZodError) {
+        toast({
+          title: "Validation Error",
+          description: error.errors[0].message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -74,6 +101,9 @@ const SchoolOnboarding = () => {
     setLoading(true);
 
     try {
+      // Validate input
+      const validated = teacherSchema.parse(teacherData);
+      
       const { data: school } = await supabase
         .from("schools")
         .select("id")
@@ -86,9 +116,9 @@ const SchoolOnboarding = () => {
         .from("teachers")
         .insert({
           school_id: school.id,
-          name: teacherData.name,
-          mobile: teacherData.mobile,
-          email: teacherData.email,
+          name: validated.name,
+          mobile: validated.mobile,
+          email: validated.email,
           academic_year: new Date().getFullYear().toString()
         });
 
@@ -116,11 +146,19 @@ const SchoolOnboarding = () => {
       });
       navigate("/school/dashboard");
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      if (error instanceof z.ZodError) {
+        toast({
+          title: "Validation Error",
+          description: error.errors[0].message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }
