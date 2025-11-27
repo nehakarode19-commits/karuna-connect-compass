@@ -305,16 +305,10 @@ const AdminSchools = () => {
           </Card>
         ) : filteredSchools.length === 0 ? (
           <Card>
-            <CardContent className="py-12 text-center space-y-4">
+            <CardContent className="py-12 text-center">
               <p className="text-muted-foreground">
                 {searchTerm ? "No schools found matching your search" : "No schools registered yet"}
               </p>
-              {!searchTerm && (
-                <Button onClick={() => setShowAddSchoolForm(true)} className="gap-2">
-                  <Plus className="w-4 h-4" />
-                  Add First School
-                </Button>
-              )}
             </CardContent>
           </Card>
         ) : (
