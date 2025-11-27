@@ -5,6 +5,7 @@ import { EvaluatorSidebar } from "@/components/evaluator/EvaluatorSidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Bell, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import karunaLogo from "@/assets/karuna-logo.png";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,9 +47,12 @@ export function EvaluatorLayout({ children }: EvaluatorLayoutProps) {
       <div className="min-h-screen flex w-full bg-background">
         <EvaluatorSidebar />
         <div className="flex-1 flex flex-col">
-          <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-soft">
             <div className="container flex h-16 items-center justify-between px-4">
-              <SidebarTrigger />
+              <div className="flex items-center gap-4">
+                <SidebarTrigger />
+                <img src={karunaLogo} alt="Karuna International" className="h-10 w-auto hidden md:block" />
+              </div>
               
               <div className="flex items-center gap-4">
                 <Button variant="ghost" size="icon">
