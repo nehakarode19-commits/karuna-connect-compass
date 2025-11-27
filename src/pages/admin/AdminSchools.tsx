@@ -59,6 +59,7 @@ const AdminSchools = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [showAddSchoolForm, setShowAddSchoolForm] = useState(false);
+  const [editingSchool, setEditingSchool] = useState<School | null>(null);
   const [formData, setFormData] = useState({
     kcNo: "",
     schoolName: "",
@@ -148,6 +149,22 @@ const AdminSchools = () => {
     }
   };
 
+  const handleEditSchool = (school: School) => {
+    setEditingSchool(school);
+    setFormData({
+      kcNo: school.kc_no,
+      schoolName: school.school_name,
+      kendraName: school.kendra_name,
+      principalName: school.principal_name,
+      contactNumber: school.contact_number,
+      schoolEmail: school.email,
+      teacherName: "",
+      teacherMobile: "",
+      teacherEmail: "",
+    });
+    setShowAddSchoolForm(true);
+  };
+
   const handleAddSchool = async () => {
     try {
       schoolFormSchema.parse(formData);
@@ -172,47 +189,70 @@ const AdminSchools = () => {
       if (!user) {
         toast({
           title: "Error",
-          description: "You must be logged in to add schools",
+          description: "You must be logged in to manage schools",
           variant: "destructive",
         });
         return;
       }
 
-      const { data: schoolData, error: schoolError } = await supabase
-        .from("schools")
-        .insert({
-          kc_no: formData.kcNo || `KC${Date.now()}`,
-          school_name: formData.schoolName,
-          principal_name: formData.principalName,
-          contact_number: formData.contactNumber,
-          email: formData.schoolEmail,
-          kendra_name: formData.kendraName,
-          status: 'approved',
-          approved_at: new Date().toISOString(),
-          user_id: user.id,
-        })
-        .select()
-        .single();
+      if (editingSchool) {
+        // Update existing school
+        const { error: schoolError } = await supabase
+          .from("schools")
+          .update({
+            kc_no: formData.kcNo || editingSchool.kc_no,
+            school_name: formData.schoolName,
+            principal_name: formData.principalName,
+            contact_number: formData.contactNumber,
+            email: formData.schoolEmail,
+            kendra_name: formData.kendraName,
+          })
+          .eq("id", editingSchool.id);
 
-      if (schoolError) throw schoolError;
+        if (schoolError) throw schoolError;
 
-      const { error: teacherError } = await supabase
-        .from("teachers")
-        .insert({
-          school_id: schoolData.id,
-          name: formData.teacherName,
-          mobile: formData.teacherMobile,
-          email: formData.teacherEmail,
-          academic_year: new Date().getFullYear().toString(),
-          is_current: true,
+        toast({
+          title: "Success",
+          description: "School updated successfully",
         });
+      } else {
+        // Create new school
+        const { data: schoolData, error: schoolError } = await supabase
+          .from("schools")
+          .insert({
+            kc_no: formData.kcNo || `KC${Date.now()}`,
+            school_name: formData.schoolName,
+            principal_name: formData.principalName,
+            contact_number: formData.contactNumber,
+            email: formData.schoolEmail,
+            kendra_name: formData.kendraName,
+            status: 'approved',
+            approved_at: new Date().toISOString(),
+            user_id: user.id,
+          })
+          .select()
+          .single();
 
-      if (teacherError) throw teacherError;
+        if (schoolError) throw schoolError;
 
-      toast({
-        title: "Success",
-        description: "School added successfully",
-      });
+        const { error: teacherError } = await supabase
+          .from("teachers")
+          .insert({
+            school_id: schoolData.id,
+            name: formData.teacherName,
+            mobile: formData.teacherMobile,
+            email: formData.teacherEmail,
+            academic_year: new Date().getFullYear().toString(),
+            is_current: true,
+          });
+
+        if (teacherError) throw teacherError;
+
+        toast({
+          title: "Success",
+          description: "School added successfully",
+        });
+      }
       
       setFormData({
         kcNo: "",
@@ -225,13 +265,14 @@ const AdminSchools = () => {
         teacherMobile: "",
         teacherEmail: "",
       });
+      setEditingSchool(null);
       setShowAddSchoolForm(false);
       fetchSchools();
       fetchStats();
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to add school",
+        description: error.message || `Failed to ${editingSchool ? "update" : "add"} school`,
         variant: "destructive",
       });
     } finally {
@@ -349,7 +390,7 @@ const AdminSchools = () => {
                         size="sm" 
                         variant="outline" 
                         className="flex-1"
-                        onClick={() => navigate(`/admin/school-approvals`)}
+                        onClick={() => handleEditSchool(school)}
                       >
                         <Edit className="w-3 h-3 mr-1" />
                         Edit
@@ -371,10 +412,27 @@ const AdminSchools = () => {
       </div>
 
       {/* Add School Form Dialog */}
-      <Dialog open={showAddSchoolForm} onOpenChange={setShowAddSchoolForm}>
+      <Dialog open={showAddSchoolForm} onOpenChange={(open) => {
+        setShowAddSchoolForm(open);
+        if (!open) {
+          setEditingSchool(null);
+          setFormData({
+            kcNo: "",
+            schoolName: "",
+            kendraName: "",
+            principalName: "",
+            contactNumber: "",
+            schoolEmail: "",
+            teacherName: "",
+            teacherMobile: "",
+            teacherEmail: "",
+          });
+          setFormErrors({});
+        }
+      }}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-2xl">Add School</DialogTitle>
+            <DialogTitle className="text-2xl">{editingSchool ? "Edit School" : "Add School"}</DialogTitle>
           </DialogHeader>
           
           <div className="space-y-6">
@@ -483,8 +541,9 @@ const AdminSchools = () => {
             </div>
 
             {/* Karuna Club Teacher In-charge Section */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Karuna Club Teacher In-charge</h3>
+            {!editingSchool && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Karuna Club Teacher In-charge</h3>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
@@ -537,6 +596,7 @@ const AdminSchools = () => {
                 </div>
               </div>
             </div>
+            )}
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
@@ -544,6 +604,7 @@ const AdminSchools = () => {
               variant="outline"
               onClick={() => {
                 setShowAddSchoolForm(false);
+                setEditingSchool(null);
                 setFormData({
                   kcNo: "",
                   schoolName: "",
@@ -561,7 +622,7 @@ const AdminSchools = () => {
               Cancel
             </Button>
             <Button onClick={handleAddSchool} disabled={loading} className="bg-primary">
-              {loading ? "Saving..." : "Save"}
+              {loading ? "Saving..." : editingSchool ? "Update" : "Save"}
             </Button>
           </DialogFooter>
         </DialogContent>
