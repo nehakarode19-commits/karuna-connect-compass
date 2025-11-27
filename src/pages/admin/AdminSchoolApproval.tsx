@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, XCircle, Clock, Search, Eye } from "lucide-react";
+import { CheckCircle, XCircle, Clock, Search, Plus, X } from "lucide-react";
+import { z } from "zod";
 import {
   Dialog,
   DialogContent,
@@ -30,6 +32,18 @@ interface School {
   rejection_reason?: string;
 }
 
+const schoolFormSchema = z.object({
+  kcNo: z.string().trim().max(50).optional(),
+  schoolName: z.string().trim().min(2, "School name is required").max(200),
+  kendraName: z.string().trim().min(2, "Kendra name is required").max(200),
+  principalName: z.string().trim().min(2, "Principal name is required").max(100),
+  contactNumber: z.string().regex(/^[0-9]{10}$/, "Contact number must be 10 digits"),
+  schoolEmail: z.string().email("Invalid email address").max(255),
+  teacherName: z.string().trim().min(2, "Teacher name is required").max(100),
+  teacherMobile: z.string().regex(/^[0-9]{10}$/, "Mobile number must be 10 digits"),
+  teacherEmail: z.string().email("Invalid email address").max(255),
+});
+
 export default function AdminSchoolApproval() {
   const [schools, setSchools] = useState<School[]>([]);
   const [filteredSchools, setFilteredSchools] = useState<School[]>([]);
@@ -38,8 +52,23 @@ export default function AdminSchoolApproval() {
   const [selectedSchool, setSelectedSchool] = useState<School | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [showAddSchoolForm, setShowAddSchoolForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  
+  // Add School Form State
+  const [formData, setFormData] = useState({
+    kcNo: "",
+    schoolName: "",
+    kendraName: "",
+    principalName: "",
+    contactNumber: "",
+    schoolEmail: "",
+    teacherName: "",
+    teacherMobile: "",
+    teacherEmail: "",
+  });
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchSchools();
@@ -146,6 +175,102 @@ export default function AdminSchoolApproval() {
     setLoading(false);
   };
 
+  const handleAddSchool = async () => {
+    // Validate form
+    try {
+      schoolFormSchema.parse(formData);
+      setFormErrors({});
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const errors: Record<string, string> = {};
+        error.errors.forEach((err) => {
+          if (err.path[0]) {
+            errors[err.path[0] as string] = err.message;
+          }
+        });
+        setFormErrors(errors);
+        return;
+      }
+    }
+
+    setLoading(true);
+    try {
+      // Get the current user (admin)
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to add schools",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Create a temporary user_id (in production, school would sign up themselves)
+      // For now, we'll use the admin's user_id as a placeholder
+      const { data: schoolData, error: schoolError } = await supabase
+        .from("schools")
+        .insert({
+          kc_no: formData.kcNo || `KC${Date.now()}`,
+          school_name: formData.schoolName,
+          principal_name: formData.principalName,
+          contact_number: formData.contactNumber,
+          email: formData.schoolEmail,
+          kendra_name: formData.kendraName,
+          status: 'approved',
+          approved_at: new Date().toISOString(),
+          user_id: user.id, // Placeholder - in production this would be the school's own user_id
+        })
+        .select()
+        .single();
+
+      if (schoolError) throw schoolError;
+
+      // Add teacher record
+      const { error: teacherError } = await supabase
+        .from("teachers")
+        .insert({
+          school_id: schoolData.id,
+          name: formData.teacherName,
+          mobile: formData.teacherMobile,
+          email: formData.teacherEmail,
+          academic_year: new Date().getFullYear().toString(),
+          is_current: true,
+        });
+
+      if (teacherError) throw teacherError;
+
+      toast({
+        title: "Success",
+        description: "School added successfully",
+      });
+      
+      // Reset form and close
+      setFormData({
+        kcNo: "",
+        schoolName: "",
+        kendraName: "",
+        principalName: "",
+        contactNumber: "",
+        schoolEmail: "",
+        teacherName: "",
+        teacherMobile: "",
+        teacherEmail: "",
+      });
+      setShowAddSchoolForm(false);
+      fetchSchools();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add school",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'approved':
@@ -166,9 +291,15 @@ export default function AdminSchoolApproval() {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">School Approvals</h1>
-          <p className="text-muted-foreground">Review and approve school registrations</p>
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold">School Approvals</h1>
+            <p className="text-muted-foreground">Review and approve school registrations</p>
+          </div>
+          <Button onClick={() => setShowAddSchoolForm(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Add School
+          </Button>
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
@@ -337,6 +468,188 @@ export default function AdminSchoolApproval() {
             </Button>
             <Button variant="destructive" onClick={handleReject} disabled={loading}>
               Reject School
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add School Form Dialog */}
+      <Dialog open={showAddSchoolForm} onOpenChange={setShowAddSchoolForm}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">Add School</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {/* School and Contact Details Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-foreground">School and Contact Details</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="kcNo">
+                    KC No <span className="text-xs text-muted-foreground">(call KC Hango at 67348 82288)</span>
+                  </Label>
+                  <Input
+                    id="kcNo"
+                    placeholder="KC No"
+                    value={formData.kcNo}
+                    onChange={(e) => setFormData({ ...formData, kcNo: e.target.value })}
+                    className={formErrors.kcNo ? "border-destructive" : ""}
+                  />
+                  {formErrors.kcNo && (
+                    <p className="text-xs text-destructive">{formErrors.kcNo}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="schoolName">School Name*</Label>
+                  <Input
+                    id="schoolName"
+                    placeholder="School Name"
+                    value={formData.schoolName}
+                    onChange={(e) => setFormData({ ...formData, schoolName: e.target.value })}
+                    className={formErrors.schoolName ? "border-destructive" : ""}
+                  />
+                  {formErrors.schoolName && (
+                    <p className="text-xs text-destructive">{formErrors.schoolName}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="kendraName">Nearest Karuna Kendra Name</Label>
+                  <Input
+                    id="kendraName"
+                    placeholder="Nearest Karuna Kendra Name"
+                    value={formData.kendraName}
+                    onChange={(e) => setFormData({ ...formData, kendraName: e.target.value })}
+                    className={formErrors.kendraName ? "border-destructive" : ""}
+                  />
+                  {formErrors.kendraName && (
+                    <p className="text-xs text-destructive">{formErrors.kendraName}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="principalName">School Principal's Name*</Label>
+                  <Input
+                    id="principalName"
+                    placeholder="School Principal's Name"
+                    value={formData.principalName}
+                    onChange={(e) => setFormData({ ...formData, principalName: e.target.value })}
+                    className={formErrors.principalName ? "border-destructive" : ""}
+                  />
+                  {formErrors.principalName && (
+                    <p className="text-xs text-destructive">{formErrors.principalName}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="contactNumber">School Contact Number*</Label>
+                  <Input
+                    id="contactNumber"
+                    placeholder="School Contact Number"
+                    value={formData.contactNumber}
+                    onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
+                    className={formErrors.contactNumber ? "border-destructive" : ""}
+                  />
+                  {formErrors.contactNumber && (
+                    <p className="text-xs text-destructive">{formErrors.contactNumber}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="schoolEmail">School Email ID*</Label>
+                  <Input
+                    id="schoolEmail"
+                    type="email"
+                    placeholder="School Email ID"
+                    value={formData.schoolEmail}
+                    onChange={(e) => setFormData({ ...formData, schoolEmail: e.target.value })}
+                    className={formErrors.schoolEmail ? "border-destructive" : ""}
+                  />
+                  {formErrors.schoolEmail && (
+                    <p className="text-xs text-destructive">{formErrors.schoolEmail}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Karuna Club Teacher In-charge Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-foreground">Karuna Club Teacher In-charge</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="teacherName">Name*</Label>
+                  <Input
+                    id="teacherName"
+                    placeholder="Karuna Club Teacher In-charge Name"
+                    value={formData.teacherName}
+                    onChange={(e) => setFormData({ ...formData, teacherName: e.target.value })}
+                    className={formErrors.teacherName ? "border-destructive" : ""}
+                  />
+                  {formErrors.teacherName && (
+                    <p className="text-xs text-destructive">{formErrors.teacherName}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="teacherMobile">Mobile Number*</Label>
+                  <Input
+                    id="teacherMobile"
+                    placeholder="Mobile Number"
+                    value={formData.teacherMobile}
+                    onChange={(e) => setFormData({ ...formData, teacherMobile: e.target.value })}
+                    className={formErrors.teacherMobile ? "border-destructive" : ""}
+                  />
+                  {formErrors.teacherMobile && (
+                    <p className="text-xs text-destructive">{formErrors.teacherMobile}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="teacherEmail">Email ID*</Label>
+                  <Input
+                    id="teacherEmail"
+                    type="email"
+                    placeholder="Email ID"
+                    value={formData.teacherEmail}
+                    onChange={(e) => setFormData({ ...formData, teacherEmail: e.target.value })}
+                    className={formErrors.teacherEmail ? "border-destructive" : ""}
+                  />
+                  {formErrors.teacherEmail && (
+                    <p className="text-xs text-destructive">{formErrors.teacherEmail}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="flex gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowAddSchoolForm(false);
+                setFormData({
+                  kcNo: "",
+                  schoolName: "",
+                  kendraName: "",
+                  principalName: "",
+                  contactNumber: "",
+                  schoolEmail: "",
+                  teacherName: "",
+                  teacherMobile: "",
+                  teacherEmail: "",
+                });
+                setFormErrors({});
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleAddSchool} disabled={loading}>
+              {loading ? "Saving..." : "Save"}
             </Button>
           </DialogFooter>
         </DialogContent>
