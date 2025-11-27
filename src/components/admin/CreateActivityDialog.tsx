@@ -37,7 +37,10 @@ export function CreateActivityDialog() {
       .from(bucket)
       .upload(fileName, file);
 
-    if (error) throw error;
+    if (error) {
+      console.error('File upload error:', error);
+      throw new Error(`Failed to upload ${file.name}: ${error.message}`);
+    }
 
     const { data: { publicUrl } } = supabase.storage
       .from(bucket)
@@ -63,26 +66,36 @@ export function CreateActivityDialog() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
+      if (!user) {
+        throw new Error("You must be logged in to create activities");
+      }
+
+      console.log('Creating activity as user:', user.id);
+      
       let thumbnailUrl = null;
       let bannerUrl = null;
       const attachmentUrls = [];
 
       // Upload thumbnail
       if (thumbnailFile) {
+        console.log('Uploading thumbnail:', thumbnailFile.name);
         thumbnailUrl = await uploadFile(thumbnailFile, 'activity-media', 'thumbnails');
       }
 
       // Upload banner
       if (bannerFile) {
+        console.log('Uploading banner:', bannerFile.name);
         bannerUrl = await uploadFile(bannerFile, 'activity-media', 'banners');
       }
 
       // Upload attachments
       for (const file of attachments) {
+        console.log('Uploading attachment:', file.name);
         const url = await uploadFile(file, 'activity-media', 'attachments');
         attachmentUrls.push({ name: file.name, url });
       }
 
+      console.log('Inserting event into database...');
       const { error } = await supabase
         .from("events")
         .insert({
@@ -94,11 +107,14 @@ export function CreateActivityDialog() {
           thumbnail_url: thumbnailUrl,
           banner_url: bannerUrl,
           attachments: attachmentUrls,
-          created_by: user?.id,
+          created_by: user.id,
           status: "active",
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database insert error:', error);
+        throw new Error(`Failed to create activity: ${error.message}`);
+      }
 
       toast({
         title: "Success",
@@ -115,9 +131,10 @@ export function CreateActivityDialog() {
       
       window.location.reload();
     } catch (error: any) {
+      console.error('Activity creation error:', error);
       toast({
-        title: "Error",
-        description: error.message,
+        title: "Error Creating Activity",
+        description: error.message || "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
     } finally {
