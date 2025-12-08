@@ -9,6 +9,7 @@ import { Calendar, FileText, Eye, Award, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { demoSubmissions } from "@/data/demoData";
 
 interface Submission {
   id: string;
@@ -30,13 +31,27 @@ const SchoolSubmissions = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user) {
-      fetchSubmissions();
-    }
+    fetchSubmissions();
   }, [user]);
 
   const fetchSubmissions = async () => {
     try {
+      if (!user) {
+        // Use demo data when not logged in
+        const demoSchoolSubmissions = demoSubmissions.map(s => ({
+          id: s.id,
+          event_id: s.event_id,
+          status: s.status,
+          score: s.score,
+          submitted_at: s.submitted_at || "",
+          admin_comments: s.admin_comments,
+          events: s.events
+        }));
+        setSubmissions(demoSchoolSubmissions);
+        setLoading(false);
+        return;
+      }
+      
       // First get the school for this user
       const { data: schoolData, error: schoolError } = await supabase
         .from("schools")
@@ -46,6 +61,17 @@ const SchoolSubmissions = () => {
 
       if (schoolError) throw schoolError;
       if (!schoolData) {
+        // Use demo data if no school found
+        const demoSchoolSubmissions = demoSubmissions.map(s => ({
+          id: s.id,
+          event_id: s.event_id,
+          status: s.status,
+          score: s.score,
+          submitted_at: s.submitted_at || "",
+          admin_comments: s.admin_comments,
+          events: s.events
+        }));
+        setSubmissions(demoSchoolSubmissions);
         setLoading(false);
         return;
       }
@@ -62,13 +88,35 @@ const SchoolSubmissions = () => {
         .order("submitted_at", { ascending: false });
 
       if (error) throw error;
-      setSubmissions(data || []);
+      
+      if (data && data.length > 0) {
+        setSubmissions(data);
+      } else {
+        // Use demo data if no submissions
+        const demoSchoolSubmissions = demoSubmissions.map(s => ({
+          id: s.id,
+          event_id: s.event_id,
+          status: s.status,
+          score: s.score,
+          submitted_at: s.submitted_at || "",
+          admin_comments: s.admin_comments,
+          events: s.events
+        }));
+        setSubmissions(demoSchoolSubmissions);
+      }
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      // Fallback to demo data on error
+      const demoSchoolSubmissions = demoSubmissions.map(s => ({
+        id: s.id,
+        event_id: s.event_id,
+        status: s.status,
+        score: s.score,
+        submitted_at: s.submitted_at || "",
+        admin_comments: s.admin_comments,
+        events: s.events
+      }));
+      setSubmissions(demoSchoolSubmissions);
+      console.error("Using demo data:", error);
     } finally {
       setLoading(false);
     }
