@@ -9,6 +9,7 @@ import { ArrowLeft, Calendar, MapPin, Users, FileText, TrendingUp, Eye, Award, U
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { AssignActivityDialog } from "@/components/admin/AssignActivityDialog";
+import { demoActivities, getDemoActivity } from "@/data/demoActivities";
 
 interface Activity {
   id: string;
@@ -42,6 +43,12 @@ const AdminActivityDetail = () => {
   const [loading, setLoading] = useState(true);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
 
+  // Check if ID is a valid UUID format
+  const isValidUUID = (id: string) => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(id);
+  };
+
   useEffect(() => {
     if (activityId) {
       fetchActivityDetails();
@@ -49,30 +56,76 @@ const AdminActivityDetail = () => {
   }, [activityId]);
 
   const fetchActivityDetails = async () => {
+    // First try demo data if it's a demo ID or non-UUID
+    const demoId = activityId?.startsWith("demo-") ? activityId : `demo-${activityId}`;
+    const demoActivity = getDemoActivity(demoId);
+    
+    if (demoActivity) {
+      setActivity(demoActivity);
+      // Set demo submissions
+      setSubmissions([
+        {
+          id: "demo-sub-1",
+          school_id: "demo-school-1",
+          status: "approved",
+          score: 85,
+          submitted_at: "2024-12-05T10:00:00Z",
+          schools: { school_name: "Delhi Public School", kc_no: "KC-001" }
+        },
+        {
+          id: "demo-sub-2",
+          school_id: "demo-school-2",
+          status: "pending",
+          score: null,
+          submitted_at: "2024-12-06T14:30:00Z",
+          schools: { school_name: "St. Mary's High School", kc_no: "KC-002" }
+        },
+        {
+          id: "demo-sub-3",
+          school_id: "demo-school-3",
+          status: "rejected",
+          score: null,
+          submitted_at: "2024-12-04T09:15:00Z",
+          schools: { school_name: "Greenfield Academy", kc_no: "KC-003" }
+        }
+      ]);
+      setLoading(false);
+      return;
+    }
+
+    // Only query Supabase if it's a valid UUID
+    if (!isValidUUID(activityId!)) {
+      setLoading(false);
+      return;
+    }
+
     try {
       const { data: activityData, error: activityError } = await supabase
         .from("events")
         .select("*")
         .eq("id", activityId)
-        .single();
+        .maybeSingle();
 
       if (activityError) throw activityError;
-      setActivity(activityData);
+      
+      if (activityData) {
+        setActivity(activityData);
 
-      const { data: submissionsData, error: submissionsError } = await supabase
-        .from("event_submissions")
-        .select(`
-          *,
-          schools (
-            school_name,
-            kc_no
-          )
-        `)
-        .eq("event_id", activityId)
-        .order("submitted_at", { ascending: false });
+        const { data: submissionsData, error: submissionsError } = await supabase
+          .from("event_submissions")
+          .select(`
+            *,
+            schools (
+              school_name,
+              kc_no
+            )
+          `)
+          .eq("event_id", activityId)
+          .order("submitted_at", { ascending: false });
 
-      if (submissionsError) throw submissionsError;
-      setSubmissions(submissionsData || []);
+        if (submissionsError) throw submissionsError;
+        setSubmissions(submissionsData || []);
+      }
     } catch (error: any) {
       toast({
         title: "Error",
