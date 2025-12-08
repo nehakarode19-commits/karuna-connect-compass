@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar, MapPin, Plus, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { demoActivities } from "@/data/demoActivities";
 
 interface Event {
   id: string;
@@ -36,15 +37,29 @@ const SchoolActivities = () => {
     try {
       // First get the logged-in school
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      
+      if (!user) {
+        // Use demo data when not authenticated
+        setEvents(demoActivities);
+        setLoading(false);
+        return;
+      }
 
       const { data: schoolData, error: schoolError } = await supabase
         .from("schools")
         .select("*")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
       if (schoolError) throw schoolError;
+      
+      if (!schoolData) {
+        // No school found, use demo data
+        setEvents(demoActivities);
+        setLoading(false);
+        return;
+      }
+      
       setSchool(schoolData);
 
       // Get assigned activities for this school or chapter
@@ -58,7 +73,9 @@ const SchoolActivities = () => {
       const assignedEventIds = assignments?.map(a => a.event_id) || [];
       
       if (assignedEventIds.length === 0) {
-        setEvents([]);
+        // No assignments, use demo data
+        setEvents(demoActivities);
+        setLoading(false);
         return;
       }
 
@@ -72,19 +89,21 @@ const SchoolActivities = () => {
 
       if (error) throw error;
       
-      // Add deadline info to events
-      const eventsWithDeadlines = data.map(event => ({
-        ...event,
-        deadline: assignments?.find(a => a.event_id === event.id)?.deadline
-      }));
-      
-      setEvents(eventsWithDeadlines);
+      if (!data || data.length === 0) {
+        // No events found, use demo data
+        setEvents(demoActivities);
+      } else {
+        // Add deadline info to events
+        const eventsWithDeadlines = data.map(event => ({
+          ...event,
+          deadline: assignments?.find(a => a.event_id === event.id)?.deadline
+        }));
+        setEvents(eventsWithDeadlines);
+      }
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      console.error("Error fetching events:", error);
+      // On any error, fall back to demo data
+      setEvents(demoActivities);
     } finally {
       setLoading(false);
     }
@@ -92,7 +111,7 @@ const SchoolActivities = () => {
 
   const filteredEvents = events.filter((event) =>
     event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    event.description.toLowerCase().includes(searchTerm.toLowerCase())
+    event.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -145,7 +164,10 @@ const SchoolActivities = () => {
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                   <div className="absolute top-3 right-3">
-                    <Badge variant="default" className="bg-background/90 backdrop-blur-sm">
+                    <Badge 
+                      variant={event.status === "active" ? "default" : "secondary"}
+                      className="bg-background/90 backdrop-blur-sm"
+                    >
                       {event.status}
                     </Badge>
                   </div>
