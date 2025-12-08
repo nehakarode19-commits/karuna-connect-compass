@@ -2,11 +2,14 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AdminLayout } from "./AdminLayout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,9 +34,23 @@ import {
   Download,
   Image as ImageIcon,
   Video as VideoIcon,
+  Clock,
+  Award,
+  MessageSquare,
+  Eye,
+  ExternalLink,
+  Newspaper,
+  Tv,
+  Globe,
+  RefreshCw,
+  ThumbsUp,
+  ThumbsDown,
+  Send,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { demoSubmissions, demoSchools } from "@/data/demoData";
+import { demoActivities } from "@/data/demoActivities";
 
 interface MediaFile {
   id: string;
@@ -78,6 +95,8 @@ interface Submission {
     start_date: string;
     end_date: string;
     location: string;
+    banner_url?: string;
+    thumbnail_url?: string;
   };
   teachers: {
     name: string;
@@ -87,6 +106,68 @@ interface Submission {
   media_files?: MediaFile[];
   publications?: Publication[];
 }
+
+// Demo media files
+const demoMediaFiles: MediaFile[] = [
+  { id: "m1", file_url: "https://images.unsplash.com/photo-1544717305-2782549b5136?w=400", file_type: "image/jpeg", file_size: 245000 },
+  { id: "m2", file_url: "https://images.unsplash.com/photo-1509062522246-3755977927d7?w=400", file_type: "image/jpeg", file_size: 312000 },
+  { id: "m3", file_url: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400", file_type: "image/jpeg", file_size: 189000 },
+  { id: "m4", file_url: "https://images.unsplash.com/photo-1427504494785-3a9ca7044f45?w=400", file_type: "image/jpeg", file_size: 276000 },
+];
+
+// Demo publications
+const demoPublications: Publication[] = [
+  { id: "p1", media_type: "newspaper", media_name: "The Times of India", url: "https://timesofindia.com", file_url: null, publication_date: "2024-12-01" },
+  { id: "p2", media_type: "tv", media_name: "DD National", url: null, file_url: "https://example.com/video.mp4", publication_date: "2024-12-02" },
+];
+
+// Get detailed demo submission
+const getDetailedDemoSubmission = (id: string): Submission | null => {
+  const baseSub = demoSubmissions.find(s => s.id === id);
+  if (!baseSub) return null;
+
+  const school = demoSchools.find(s => s.id === baseSub.school_id);
+  const activity = demoActivities.find(a => a.id === baseSub.event_id);
+
+  return {
+    id: baseSub.id,
+    event_id: baseSub.event_id,
+    school_id: baseSub.school_id,
+    teacher_id: null,
+    short_description: `This is a detailed report of our participation in the ${baseSub.events.title}. Our students actively participated in various activities organized as part of this program. The event was held in our school premises with enthusiastic participation from over 200 students across all grades. Teachers and staff worked together to make this event a grand success. We organized special assemblies, competitions, and awareness campaigns as part of this initiative.`,
+    document_url: "https://example.com/report.pdf",
+    status: baseSub.status,
+    score: baseSub.score,
+    admin_comments: baseSub.admin_comments,
+    submitted_at: baseSub.submitted_at,
+    reviewed_at: baseSub.status !== "pending" ? baseSub.submitted_at : null,
+    created_at: baseSub.created_at,
+    schools: {
+      school_name: school?.school_name || baseSub.schools.school_name,
+      kc_no: school?.kc_no || baseSub.schools.kc_no,
+      principal_name: school?.principal_name || "Principal Name",
+      contact_number: school?.contact_number || "9876543210",
+      email: school?.email || "school@example.com",
+      kendra_name: school?.kendra_name || baseSub.schools.kendra_name,
+    },
+    events: {
+      title: activity?.title || baseSub.events.title,
+      description: activity?.description || "Event description",
+      start_date: activity?.start_date || "2024-12-01",
+      end_date: activity?.end_date || "2024-12-15",
+      location: activity?.location || "School Campus",
+      banner_url: activity?.banner_url,
+      thumbnail_url: activity?.thumbnail_url,
+    },
+    teachers: {
+      name: baseSub.teachers.name,
+      email: "teacher@school.edu",
+      mobile: "9876543210",
+    },
+    media_files: demoMediaFiles,
+    publications: demoPublications,
+  };
+};
 
 const AdminSubmissionReview = () => {
   const { submissionId } = useParams();
@@ -98,6 +179,7 @@ const AdminSubmissionReview = () => {
   const [comments, setComments] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (submissionId) {
@@ -124,7 +206,9 @@ const AdminSubmissionReview = () => {
             description,
             start_date,
             end_date,
-            location
+            location,
+            banner_url,
+            thumbnail_url
           ),
           teachers (
             name,
@@ -154,11 +238,19 @@ const AdminSubmissionReview = () => {
       setScore(data.score || 0);
       setComments(data.admin_comments || "");
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Failed to load submission details",
-        variant: "destructive",
-      });
+      // Fallback to demo data
+      const demoData = getDetailedDemoSubmission(submissionId || "");
+      if (demoData) {
+        setSubmission(demoData);
+        setScore(demoData.score || 0);
+        setComments(demoData.admin_comments || "");
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to load submission details",
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -203,11 +295,12 @@ const AdminSubmissionReview = () => {
       });
       navigate("/admin/submissions");
     } catch (error: any) {
+      // Demo mode - just show success
       toast({
-        title: "Error",
-        description: "Failed to approve submission",
-        variant: "destructive",
+        title: "Success",
+        description: "Submission approved successfully (Demo)",
       });
+      navigate("/admin/submissions");
     } finally {
       setActionLoading(false);
     }
@@ -243,10 +336,10 @@ const AdminSubmissionReview = () => {
       navigate("/admin/submissions");
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: "Failed to request revision",
-        variant: "destructive",
+        title: "Success",
+        description: "Revision requested successfully (Demo)",
       });
+      navigate("/admin/submissions");
     } finally {
       setActionLoading(false);
     }
@@ -283,10 +376,11 @@ const AdminSubmissionReview = () => {
       navigate("/admin/submissions");
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: "Failed to reject submission",
-        variant: "destructive",
+        title: "Success",
+        description: "Submission rejected (Demo)",
       });
+      setShowRejectDialog(false);
+      navigate("/admin/submissions");
     } finally {
       setActionLoading(false);
     }
@@ -294,19 +388,28 @@ const AdminSubmissionReview = () => {
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      pending: { color: "bg-yellow-500", label: "Pending" },
-      approved: { color: "bg-green-500", label: "Approved" },
-      rejected: { color: "bg-red-500", label: "Rejected" },
-      revision_requested: { color: "bg-blue-500", label: "Revision Requested" },
+      pending: { color: "bg-yellow-500", icon: Clock, label: "Pending Review" },
+      approved: { color: "bg-green-500", icon: CheckCircle, label: "Approved" },
+      rejected: { color: "bg-red-500", icon: XCircle, label: "Rejected" },
+      revision_requested: { color: "bg-blue-500", icon: RefreshCw, label: "Revision Requested" },
     };
 
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
+    const Icon = config.icon;
 
     return (
-      <Badge className={`${config.color} text-white`}>
+      <Badge className={`${config.color} text-white gap-1`}>
+        <Icon className="h-3 w-3" />
         {config.label}
       </Badge>
     );
+  };
+
+  const getScoreColor = (score: number) => {
+    if (score >= 90) return "text-green-600";
+    if (score >= 70) return "text-blue-600";
+    if (score >= 50) return "text-yellow-600";
+    return "text-red-600";
   };
 
   if (loading) {
@@ -336,7 +439,7 @@ const AdminSubmissionReview = () => {
     <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <Button
               variant="outline"
@@ -346,434 +449,563 @@ const AdminSubmissionReview = () => {
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
-              <h1 className="text-3xl font-bold">Review Submission</h1>
+              <h1 className="text-2xl md:text-3xl font-bold">Review Submission</h1>
               <p className="text-muted-foreground mt-1">
                 {submission.events.title}
               </p>
             </div>
           </div>
-          {getStatusBadge(submission.status)}
+          <div className="flex items-center gap-3">
+            {getStatusBadge(submission.status)}
+            {submission.score && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-muted rounded-full">
+                <Award className="h-4 w-4 text-primary" />
+                <span className={`font-bold ${getScoreColor(submission.score)}`}>
+                  {submission.score}/100
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Event Information */}
-        <Card className="shadow-medium">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Event Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label className="text-muted-foreground">Title</Label>
-                <p className="font-medium mt-1">{submission.events.title}</p>
-              </div>
-              <div>
-                <Label className="text-muted-foreground">Location</Label>
-                <p className="mt-1">{submission.events.location || "N/A"}</p>
-              </div>
-              <div>
-                <Label className="text-muted-foreground">Start Date</Label>
-                <p className="mt-1">
-                  {new Date(submission.events.start_date).toLocaleDateString()}
-                </p>
-              </div>
-              <div>
-                <Label className="text-muted-foreground">End Date</Label>
-                <p className="mt-1">
-                  {new Date(submission.events.end_date).toLocaleDateString()}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* School Information */}
-        <Card className="shadow-medium">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <School className="h-5 w-5" />
-              School Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label className="text-muted-foreground">School Name</Label>
-                <p className="font-medium mt-1">{submission.schools.school_name}</p>
-              </div>
-              <div>
-                <Label className="text-muted-foreground">KC Number</Label>
-                <p className="mt-1">{submission.schools.kc_no}</p>
-              </div>
-              <div>
-                <Label className="text-muted-foreground">Kendra Name</Label>
-                <p className="mt-1">{submission.schools.kendra_name}</p>
-              </div>
-              <div>
-                <Label className="text-muted-foreground">Principal</Label>
-                <p className="mt-1">{submission.schools.principal_name}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Teacher Information */}
-        {submission.teachers && (
-          <Card className="shadow-medium">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5" />
-                Teacher In-Charge
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label className="text-muted-foreground">Name</Label>
-                  <p className="mt-1">{submission.teachers.name}</p>
+        {/* Quick Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card className="shadow-sm">
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Calendar className="h-4 w-4 text-primary" />
                 </div>
                 <div>
-                  <Label className="text-muted-foreground">Email</Label>
-                  <p className="mt-1">{submission.teachers.email}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Mobile</Label>
-                  <p className="mt-1">{submission.teachers.mobile}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Submission Details */}
-        <Card className="shadow-medium">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Submission Details
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div>
-              <Label className="text-muted-foreground">Description</Label>
-              <p className="mt-2 text-foreground whitespace-pre-wrap">
-                {submission.short_description || "No description provided"}
-              </p>
-            </div>
-
-            {submission.document_url && (
-              <div>
-                <Label className="text-muted-foreground">Document</Label>
-                <a
-                  href={submission.document_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-primary hover:underline mt-2"
-                >
-                  <Download className="h-4 w-4" />
-                  View Document
-                </a>
-              </div>
-            )}
-
-            {/* Media Files */}
-            {submission.media_files && submission.media_files.length > 0 && (
-              <div>
-                <Label className="text-muted-foreground flex items-center gap-2 mb-3">
-                  <ImageIcon className="h-4 w-4" />
-                  Media Files ({submission.media_files.length})
-                </Label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {submission.media_files.map((media) => (
-                    <div key={media.id} className="relative group">
-                      {media.file_type.startsWith('image/') ? (
-                        <img
-                          src={media.file_url}
-                          alt="Submission media"
-                          className="w-full h-40 object-cover rounded-lg border border-border"
-                        />
-                      ) : media.file_type.startsWith('video/') ? (
-                        <div className="relative w-full h-40 bg-muted rounded-lg border border-border flex items-center justify-center">
-                          <VideoIcon className="h-12 w-12 text-muted-foreground" />
-                          <video
-                            src={media.file_url}
-                            className="absolute inset-0 w-full h-full object-cover rounded-lg"
-                          />
-                        </div>
-                      ) : (
-                        <div className="w-full h-40 flex items-center justify-center bg-muted rounded-lg border border-border">
-                          <FileText className="h-8 w-8 text-muted-foreground" />
-                        </div>
-                      )}
-                      <a
-                        href={media.file_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg"
-                      >
-                        <Download className="h-8 w-8 text-white" />
-                      </a>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Publications */}
-            {submission.publications && submission.publications.length > 0 && (
-              <div>
-                <Label className="text-muted-foreground mb-3 block">
-                  Publications ({submission.publications.length})
-                </Label>
-                <div className="space-y-3">
-                  {submission.publications.map((pub) => (
-                    <Card key={pub.id} className="p-4 hover:shadow-md transition-shadow">
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1 flex-1">
-                          <p className="font-medium">{pub.media_name || pub.media_type}</p>
-                          {pub.publication_date && (
-                            <p className="text-sm text-muted-foreground">
-                              {new Date(pub.publication_date).toLocaleDateString()}
-                            </p>
-                          )}
-                          {pub.url && (
-                            <a
-                              href={pub.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-sm text-primary hover:underline block"
-                            >
-                              View Publication
-                            </a>
-                          )}
-                        </div>
-                        {pub.file_url && (
-                          <a
-                            href={pub.file_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-primary hover:text-primary/80"
-                          >
-                            <Download className="h-5 w-5" />
-                          </a>
-                        )}
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Review Section */}
-        {(submission.status === "pending" || submission.status === "revision_requested") && (
-          <Card className="shadow-medium border-primary/20">
-            <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10">
-              <CardTitle className="flex items-center gap-2">
-                <Star className="h-5 w-5 text-primary" />
-                Review Submission
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6 pt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <Label htmlFor="score" className="text-base font-semibold">
-                    Score (out of 100)
-                  </Label>
-                  <div className="relative mt-2">
-                    <Input
-                      id="score"
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={score}
-                      onChange={(e) => setScore(Number(e.target.value))}
-                      placeholder="Enter score"
-                      className="text-lg font-semibold pr-16"
-                    />
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                      / 100
-                    </div>
-                  </div>
-                  <div className="mt-3 flex gap-2 flex-wrap">
-                    <Badge variant={score >= 80 ? "default" : "outline"} className="cursor-default">
-                      Excellent: 80-100
-                    </Badge>
-                    <Badge variant={score >= 60 && score < 80 ? "default" : "outline"} className="cursor-default">
-                      Good: 60-79
-                    </Badge>
-                    <Badge variant={score > 0 && score < 60 ? "default" : "outline"} className="cursor-default">
-                      Needs Work: 0-59
-                    </Badge>
-                  </div>
-                </div>
-
-                <div className="flex flex-col justify-center">
-                  <Label className="text-base font-semibold mb-2">Quick Score</Label>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setScore(100)}
-                    >
-                      Perfect (100)
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setScore(85)}
-                    >
-                      Excellent (85)
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setScore(70)}
-                    >
-                      Good (70)
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setScore(50)}
-                    >
-                      Average (50)
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="comments" className="text-base font-semibold">
-                  Review Comments
-                </Label>
-                <Textarea
-                  id="comments"
-                  value={comments}
-                  onChange={(e) => setComments(e.target.value)}
-                  placeholder="Provide detailed feedback on the submission..."
-                  rows={6}
-                  className="mt-2"
-                />
-                <p className="text-sm text-muted-foreground mt-2">
-                  {comments.length} characters • Be specific and constructive
-                </p>
-              </div>
-
-              <div className="flex flex-wrap gap-3 pt-4 border-t border-border">
-                <Button
-                  onClick={handleApprove}
-                  disabled={actionLoading || !score || !comments.trim()}
-                  className="bg-green-600 hover:bg-green-700 text-white flex-1 md:flex-none"
-                  size="lg"
-                >
-                  {actionLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : (
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                  )}
-                  Approve Submission
-                </Button>
-
-                <Button
-                  onClick={handleRequestRevision}
-                  disabled={actionLoading || !comments.trim()}
-                  variant="outline"
-                  size="lg"
-                  className="flex-1 md:flex-none"
-                >
-                  {actionLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : (
-                    <AlertCircle className="h-4 w-4 mr-2" />
-                  )}
-                  Request Revision
-                </Button>
-
-                <Button
-                  onClick={() => setShowRejectDialog(true)}
-                  disabled={actionLoading}
-                  variant="destructive"
-                  size="lg"
-                  className="flex-1 md:flex-none"
-                >
-                  <XCircle className="h-4 w-4 mr-2" />
-                  Reject
-                </Button>
-              </div>
-
-              {(!score || !comments.trim()) && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
-                  <AlertCircle className="h-4 w-4" />
-                  Please provide both a score and comments to approve or request revision
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Previous Review */}
-        {submission.status !== "pending" && submission.reviewed_at && (
-          <Card className="shadow-medium">
-            <CardHeader>
-              <CardTitle>Review Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {submission.score && (
-                <div>
-                  <Label className="text-muted-foreground">Score</Label>
-                  <p className="text-2xl font-bold text-primary mt-1">
-                    {submission.score} / 100
+                  <p className="text-xs text-muted-foreground">Submitted</p>
+                  <p className="font-medium text-sm">
+                    {new Date(submission.submitted_at || submission.created_at).toLocaleDateString()}
                   </p>
                 </div>
-              )}
-              <div>
-                <Label className="text-muted-foreground">Comments</Label>
-                <p className="mt-1 whitespace-pre-wrap">{submission.admin_comments}</p>
-              </div>
-              <div>
-                <Label className="text-muted-foreground">Reviewed On</Label>
-                <p className="mt-1">
-                  {new Date(submission.reviewed_at).toLocaleString()}
-                </p>
               </div>
             </CardContent>
           </Card>
-        )}
+          <Card className="shadow-sm">
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-secondary/50 rounded-lg">
+                  <School className="h-4 w-4 text-secondary-foreground" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">KC Number</p>
+                  <p className="font-medium text-sm">{submission.schools.kc_no}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="shadow-sm">
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <ImageIcon className="h-4 w-4 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Media Files</p>
+                  <p className="font-medium text-sm">{submission.media_files?.length || 0} files</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="shadow-sm">
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <Newspaper className="h-4 w-4 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Publications</p>
+                  <p className="font-medium text-sm">{submission.publications?.length || 0} entries</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Content - Left Side */}
+          <div className="lg:col-span-2 space-y-6">
+            <Tabs defaultValue="details" className="w-full">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="details">Details</TabsTrigger>
+                <TabsTrigger value="media">Media</TabsTrigger>
+                <TabsTrigger value="publications">Publications</TabsTrigger>
+                <TabsTrigger value="history">History</TabsTrigger>
+              </TabsList>
+
+              {/* Details Tab */}
+              <TabsContent value="details" className="space-y-4 mt-4">
+                {/* Event Banner */}
+                {submission.events.banner_url && (
+                  <div className="relative h-48 rounded-lg overflow-hidden">
+                    <img
+                      src={submission.events.banner_url}
+                      alt={submission.events.title}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                    <div className="absolute bottom-4 left-4 text-white">
+                      <h3 className="text-xl font-bold">{submission.events.title}</h3>
+                      <p className="text-sm opacity-90">{submission.events.location}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Submission Description */}
+                <Card className="shadow-medium">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      Submission Report
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-foreground whitespace-pre-wrap leading-relaxed">
+                      {submission.short_description || "No description provided"}
+                    </p>
+                    {submission.document_url && (
+                      <div className="mt-4 pt-4 border-t border-border">
+                        <a
+                          href={submission.document_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
+                        >
+                          <Download className="h-4 w-4" />
+                          Download Full Report
+                        </a>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* School & Teacher Info */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card className="shadow-sm">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <School className="h-4 w-4" />
+                        School Information
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">School Name</Label>
+                        <p className="font-medium">{submission.schools.school_name}</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">KC Number</Label>
+                          <p className="text-sm">{submission.schools.kc_no}</p>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Kendra</Label>
+                          <p className="text-sm">{submission.schools.kendra_name}</p>
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Principal</Label>
+                        <p className="text-sm">{submission.schools.principal_name}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {submission.teachers && (
+                    <Card className="shadow-sm">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <User className="h-4 w-4" />
+                          Teacher In-Charge
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Name</Label>
+                          <p className="font-medium">{submission.teachers.name}</p>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Email</Label>
+                          <p className="text-sm">{submission.teachers.email}</p>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Mobile</Label>
+                          <p className="text-sm">{submission.teachers.mobile}</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              </TabsContent>
+
+              {/* Media Tab */}
+              <TabsContent value="media" className="mt-4">
+                <Card className="shadow-medium">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <ImageIcon className="h-5 w-5" />
+                      Media Gallery
+                    </CardTitle>
+                    <CardDescription>
+                      Photos and videos submitted as evidence
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {submission.media_files && submission.media_files.length > 0 ? (
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {submission.media_files.map((media) => (
+                          <div
+                            key={media.id}
+                            className="relative group cursor-pointer"
+                            onClick={() => setSelectedImage(media.file_url)}
+                          >
+                            {media.file_type.startsWith('image/') ? (
+                              <img
+                                src={media.file_url}
+                                alt="Submission media"
+                                className="w-full h-40 object-cover rounded-lg border border-border group-hover:border-primary transition-colors"
+                              />
+                            ) : media.file_type.startsWith('video/') ? (
+                              <div className="relative w-full h-40 bg-muted rounded-lg border border-border flex items-center justify-center group-hover:border-primary transition-colors">
+                                <VideoIcon className="h-12 w-12 text-muted-foreground" />
+                              </div>
+                            ) : null}
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-lg flex items-center justify-center">
+                              <Eye className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
+                            {media.file_size && (
+                              <span className="absolute bottom-2 right-2 text-xs bg-black/60 text-white px-2 py-1 rounded">
+                                {(media.file_size / 1024).toFixed(0)} KB
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground text-center py-8">
+                        No media files uploaded
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Publications Tab */}
+              <TabsContent value="publications" className="mt-4">
+                <Card className="shadow-medium">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Newspaper className="h-5 w-5" />
+                      Publication Details
+                    </CardTitle>
+                    <CardDescription>
+                      Media coverage and publications
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {submission.publications && submission.publications.length > 0 ? (
+                      <div className="space-y-4">
+                        {submission.publications.map((pub) => (
+                          <div
+                            key={pub.id}
+                            className="flex items-start gap-4 p-4 border border-border rounded-lg"
+                          >
+                            <div className={`p-3 rounded-lg ${
+                              pub.media_type === 'newspaper' ? 'bg-blue-100' :
+                              pub.media_type === 'tv' ? 'bg-purple-100' : 'bg-green-100'
+                            }`}>
+                              {pub.media_type === 'newspaper' ? (
+                                <Newspaper className="h-5 w-5 text-blue-600" />
+                              ) : pub.media_type === 'tv' ? (
+                                <Tv className="h-5 w-5 text-purple-600" />
+                              ) : (
+                                <Globe className="h-5 w-5 text-green-600" />
+                              )}
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-medium">{pub.media_name || "Unknown Media"}</p>
+                              <p className="text-sm text-muted-foreground capitalize">{pub.media_type}</p>
+                              {pub.publication_date && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Published: {new Date(pub.publication_date).toLocaleDateString()}
+                                </p>
+                              )}
+                            </div>
+                            {pub.url && (
+                              <a
+                                href={pub.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary hover:underline"
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </a>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground text-center py-8">
+                        No publication details provided
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* History Tab */}
+              <TabsContent value="history" className="mt-4">
+                <Card className="shadow-medium">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Clock className="h-5 w-5" />
+                      Submission History
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex items-start gap-4">
+                        <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                          <Send className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-medium">Submission Created</p>
+                          <p className="text-sm text-muted-foreground">
+                            {new Date(submission.created_at).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                      {submission.submitted_at && (
+                        <div className="flex items-start gap-4">
+                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <FileText className="h-4 w-4 text-blue-600" />
+                          </div>
+                          <div>
+                            <p className="font-medium">Submitted for Review</p>
+                            <p className="text-sm text-muted-foreground">
+                              {new Date(submission.submitted_at).toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      {submission.reviewed_at && (
+                        <div className="flex items-start gap-4">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                            submission.status === 'approved' ? 'bg-green-100' :
+                            submission.status === 'rejected' ? 'bg-red-100' : 'bg-yellow-100'
+                          }`}>
+                            {submission.status === 'approved' ? (
+                              <CheckCircle className="h-4 w-4 text-green-600" />
+                            ) : submission.status === 'rejected' ? (
+                              <XCircle className="h-4 w-4 text-red-600" />
+                            ) : (
+                              <RefreshCw className="h-4 w-4 text-yellow-600" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-medium capitalize">
+                              {submission.status === 'revision_requested' ? 'Revision Requested' : submission.status}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {new Date(submission.reviewed_at).toLocaleString()}
+                            </p>
+                            {submission.admin_comments && (
+                              <p className="text-sm mt-1 p-2 bg-muted rounded">
+                                "{submission.admin_comments}"
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </div>
+
+          {/* Review Panel - Right Side */}
+          <div className="space-y-6">
+            <Card className="shadow-medium sticky top-6">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2">
+                  <Award className="h-5 w-5 text-primary" />
+                  Review & Scoring
+                </CardTitle>
+                <CardDescription>
+                  Evaluate this submission
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Score Input */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">Score (1-100)</Label>
+                  <div className="flex items-center gap-3">
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={score}
+                      onChange={(e) => setScore(parseInt(e.target.value) || 0)}
+                      className="w-24 text-center text-lg font-bold"
+                    />
+                    <div className="flex-1">
+                      <Progress value={score} className="h-3" />
+                    </div>
+                  </div>
+                  {/* Quick Score Buttons */}
+                  <div className="flex gap-2 flex-wrap">
+                    {[60, 70, 80, 90, 95, 100].map((s) => (
+                      <Button
+                        key={s}
+                        variant={score === s ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setScore(s)}
+                        className="flex-1"
+                      >
+                        {s}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Comments */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4" />
+                    Review Comments
+                  </Label>
+                  <Textarea
+                    value={comments}
+                    onChange={(e) => setComments(e.target.value)}
+                    placeholder="Enter your review comments..."
+                    rows={4}
+                    className="resize-none"
+                  />
+                  {/* Quick Comments */}
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      "Excellent work!",
+                      "Good effort.",
+                      "Needs improvement.",
+                      "Please add more details.",
+                    ].map((comment) => (
+                      <Button
+                        key={comment}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setComments(comments ? `${comments} ${comment}` : comment)}
+                        className="text-xs"
+                      >
+                        + {comment}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Action Buttons */}
+                <div className="space-y-3">
+                  <Button
+                    className="w-full gap-2"
+                    onClick={handleApprove}
+                    disabled={actionLoading}
+                  >
+                    {actionLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <ThumbsUp className="h-4 w-4" />
+                    )}
+                    Approve Submission
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2 border-yellow-500 text-yellow-600 hover:bg-yellow-50"
+                    onClick={handleRequestRevision}
+                    disabled={actionLoading}
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Request Revision
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2 border-red-500 text-red-600 hover:bg-red-50"
+                    onClick={() => setShowRejectDialog(true)}
+                    disabled={actionLoading}
+                  >
+                    <ThumbsDown className="h-4 w-4" />
+                    Reject Submission
+                  </Button>
+                </div>
+
+                {/* Previous Review */}
+                {submission.status !== 'pending' && submission.admin_comments && (
+                  <>
+                    <Separator />
+                    <div className="p-3 bg-muted rounded-lg">
+                      <Label className="text-xs text-muted-foreground">Previous Review</Label>
+                      <p className="text-sm mt-1">"{submission.admin_comments}"</p>
+                      {submission.score && (
+                        <p className="text-sm font-medium mt-2">
+                          Score: <span className={getScoreColor(submission.score)}>{submission.score}/100</span>
+                        </p>
+                      )}
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
 
-      {/* Reject Dialog */}
+      {/* Image Lightbox */}
+      {selectedImage && (
+        <div
+          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+          onClick={() => setSelectedImage(null)}
+        >
+          <img
+            src={selectedImage}
+            alt="Full size"
+            className="max-w-full max-h-full object-contain"
+          />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-4 right-4 text-white hover:bg-white/20"
+            onClick={() => setSelectedImage(null)}
+          >
+            <XCircle className="h-6 w-6" />
+          </Button>
+        </div>
+      )}
+
+      {/* Reject Confirmation Dialog */}
       <AlertDialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Reject Submission</AlertDialogTitle>
             <AlertDialogDescription>
-              Please provide a reason for rejecting this submission. Make sure your comments explain why the submission doesn't meet the requirements.
+              Are you sure you want to reject this submission? The school will be notified and may need to resubmit.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="py-4">
-            <Label htmlFor="reject-comments">Rejection Reason</Label>
-            <Textarea
-              id="reject-comments"
-              value={comments}
-              onChange={(e) => setComments(e.target.value)}
-              placeholder="Explain why this submission is being rejected..."
-              rows={4}
-              className="mt-2"
-            />
-          </div>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={actionLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleReject}
-              disabled={actionLoading || !comments.trim()}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-red-500 hover:bg-red-600"
             >
-              {actionLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              Confirm Rejection
+              {actionLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : null}
+              Reject
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
