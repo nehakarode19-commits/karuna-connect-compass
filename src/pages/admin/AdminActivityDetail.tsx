@@ -5,11 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Calendar, MapPin, Users, FileText, TrendingUp, Eye, Award, UserPlus } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, Eye, Award, Edit } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { AssignActivityDialog } from "@/components/admin/AssignActivityDialog";
-import { demoActivities, getDemoActivity } from "@/data/demoActivities";
+import { getDemoActivity } from "@/data/demoActivities";
 
 interface Activity {
   id: string;
@@ -41,9 +40,7 @@ const AdminActivityDetail = () => {
   const [activity, setActivity] = useState<Activity | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
-  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
 
-  // Check if ID is a valid UUID format
   const isValidUUID = (id: string) => {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     return uuidRegex.test(id);
@@ -56,13 +53,11 @@ const AdminActivityDetail = () => {
   }, [activityId]);
 
   const fetchActivityDetails = async () => {
-    // First try demo data if it's a demo ID or non-UUID
     const demoId = activityId?.startsWith("demo-") ? activityId : `demo-${activityId}`;
     const demoActivity = getDemoActivity(demoId);
     
     if (demoActivity) {
       setActivity(demoActivity);
-      // Set demo submissions
       setSubmissions([
         {
           id: "demo-sub-1",
@@ -93,7 +88,6 @@ const AdminActivityDetail = () => {
       return;
     }
 
-    // Only query Supabase if it's a valid UUID
     if (!isValidUUID(activityId!)) {
       setLoading(false);
       return;
@@ -141,7 +135,7 @@ const AdminActivityDetail = () => {
     return (
       <AdminLayout>
         <div className="flex items-center justify-center h-96">
-          <p className="text-muted-foreground">Loading activity details...</p>
+          <p className="text-muted-foreground">Loading...</p>
         </div>
       </AdminLayout>
     );
@@ -157,105 +151,44 @@ const AdminActivityDetail = () => {
     );
   }
 
-  const stats = [
-    {
-      label: "Total Submissions",
-      value: submissions.length,
-      icon: FileText,
-      color: "text-blue-600 bg-blue-500/10"
-    },
-    {
-      label: "Approved",
-      value: submissions.filter(s => s.status === "approved").length,
-      icon: Award,
-      color: "text-green-600 bg-green-500/10"
-    },
-    {
-      label: "Pending Review",
-      value: submissions.filter(s => s.status === "pending").length,
-      icon: TrendingUp,
-      color: "text-orange-600 bg-orange-500/10"
-    },
-    {
-      label: "Participating Schools",
-      value: new Set(submissions.map(s => s.school_id)).size,
-      icon: Users,
-      color: "text-purple-600 bg-purple-500/10"
-    }
-  ];
-
-  const avgScore = submissions.filter(s => s.score).length > 0
-    ? (submissions.reduce((sum, s) => sum + (s.score || 0), 0) / submissions.filter(s => s.score).length).toFixed(1)
-    : "N/A";
-
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between">
           <Button variant="outline" onClick={() => navigate("/admin/activity")} className="gap-2">
             <ArrowLeft className="w-4 h-4" />
             Back to Activities
+          </Button>
+          <Button variant="outline" className="gap-2">
+            <Edit className="w-4 h-4" />
+            Edit Activity
           </Button>
         </div>
 
         <Card className="shadow-medium border-border/50">
           <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row gap-6">
-              {activity.thumbnail_url && (
-                <img
-                  src={activity.thumbnail_url}
-                  alt={activity.title}
-                  className="w-full md:w-64 h-48 object-cover rounded-lg"
-                />
-              )}
-              <div className="flex-1">
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h1 className="text-3xl font-bold mb-2">{activity.title}</h1>
-                    <p className="text-muted-foreground">{activity.description}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button onClick={() => setAssignDialogOpen(true)} size="sm">
-                      <UserPlus className="mr-2 h-4 w-4" />
-                      Assign
-                    </Button>
-                    <Badge variant={activity.status === "active" ? "default" : "secondary"}>
-                      {activity.status}
-                    </Badge>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    {new Date(activity.start_date).toLocaleDateString()} - {new Date(activity.end_date).toLocaleDateString()}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4" />
-                    {activity.location}
-                  </div>
-                </div>
+            <div className="flex items-center gap-4 mb-4">
+              <h1 className="text-2xl font-bold">{activity.title}</h1>
+              <Badge variant={activity.status === "active" ? "default" : "secondary"}>
+                {activity.status}
+              </Badge>
+            </div>
+            <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                {new Date(activity.start_date).toLocaleDateString()} - {new Date(activity.end_date).toLocaleDateString()}
+              </div>
+              <div className="flex items-center gap-2">
+                <MapPin className="w-4 h-4" />
+                {activity.location}
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {stats.map((stat, index) => (
-            <Card key={index} className="shadow-medium border-border/50">
-              <CardContent className="p-6">
-                <div className={`w-12 h-12 rounded-lg ${stat.color} flex items-center justify-center mb-4`}>
-                  <stat.icon className={`w-6 h-6 ${stat.color.split(' ')[0]}`} />
-                </div>
-                <div className="text-3xl font-bold mb-1">{stat.value}</div>
-                <div className="text-sm text-muted-foreground">{stat.label}</div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
         <Card className="shadow-medium border-border/50">
           <CardHeader>
-            <CardTitle>Submissions Overview</CardTitle>
+            <CardTitle>Submissions</CardTitle>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="all" className="w-full">
@@ -333,13 +266,6 @@ const AdminActivityDetail = () => {
           </CardContent>
         </Card>
       </div>
-
-      <AssignActivityDialog
-        open={assignDialogOpen}
-        onOpenChange={setAssignDialogOpen}
-        eventId={activityId!}
-        eventTitle={activity?.title || ""}
-      />
     </AdminLayout>
   );
 };
