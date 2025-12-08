@@ -8,6 +8,8 @@ import { SchoolLayout } from "./SchoolLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { demoActivities } from "@/data/demoActivities";
+import { demoSubmissions } from "@/data/demoData";
 
 interface Event {
   id: string;
@@ -45,6 +47,26 @@ const SchoolDashboard = () => {
   const fetchDashboardData = async () => {
     try {
       if (!user?.id) {
+        // Use demo data when not logged in
+        const demoEvents = demoActivities.filter(a => a.status === "active").slice(0, 3).map(a => ({
+          id: a.id,
+          title: a.title,
+          description: a.description,
+          location: a.location,
+          start_date: a.start_date,
+          end_date: a.end_date,
+          thumbnail_url: a.thumbnail_url
+        }));
+        setEvents(demoEvents);
+        
+        const demoSchoolSubmissions = demoSubmissions.slice(0, 5).map(s => ({
+          id: s.id,
+          status: s.status,
+          score: s.score,
+          submitted_at: s.submitted_at,
+          events: s.events
+        }));
+        setSubmissions(demoSchoolSubmissions);
         setLoading(false);
         return;
       }
@@ -68,7 +90,22 @@ const SchoolDashboard = () => {
         .limit(3);
 
       if (eventsError) throw eventsError;
-      setEvents(eventsData || []);
+      
+      if (eventsData && eventsData.length > 0) {
+        setEvents(eventsData);
+      } else {
+        // Use demo events if no data
+        const demoEvents = demoActivities.filter(a => a.status === "active").slice(0, 3).map(a => ({
+          id: a.id,
+          title: a.title,
+          description: a.description,
+          location: a.location,
+          start_date: a.start_date,
+          end_date: a.end_date,
+          thumbnail_url: a.thumbnail_url
+        }));
+        setEvents(demoEvents);
+      }
 
       // Fetch submissions
       if (school) {
@@ -86,14 +123,43 @@ const SchoolDashboard = () => {
           .limit(5);
 
         if (submissionsError) throw submissionsError;
-        setSubmissions(submissionsData || []);
+        
+        if (submissionsData && submissionsData.length > 0) {
+          setSubmissions(submissionsData);
+        } else {
+          // Use demo submissions
+          const demoSchoolSubmissions = demoSubmissions.slice(0, 5).map(s => ({
+            id: s.id,
+            status: s.status,
+            score: s.score,
+            submitted_at: s.submitted_at,
+            events: s.events
+          }));
+          setSubmissions(demoSchoolSubmissions);
+        }
       }
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      // Fallback to demo data on error
+      const demoEvents = demoActivities.filter(a => a.status === "active").slice(0, 3).map(a => ({
+        id: a.id,
+        title: a.title,
+        description: a.description,
+        location: a.location,
+        start_date: a.start_date,
+        end_date: a.end_date,
+        thumbnail_url: a.thumbnail_url
+      }));
+      setEvents(demoEvents);
+      
+      const demoSchoolSubmissions = demoSubmissions.slice(0, 5).map(s => ({
+        id: s.id,
+        status: s.status,
+        score: s.score,
+        submitted_at: s.submitted_at,
+        events: s.events
+      }));
+      setSubmissions(demoSchoolSubmissions);
+      console.error("Using demo data:", error);
     } finally {
       setLoading(false);
     }

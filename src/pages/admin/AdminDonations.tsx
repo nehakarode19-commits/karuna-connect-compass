@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Search, Download, Heart, TrendingUp, Repeat, IndianRupee, Mail, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { demoDonations } from "@/data/demoData";
 
 interface Donation {
   id: string;
@@ -60,13 +61,16 @@ const AdminDonations = () => {
         .order("donation_date", { ascending: false });
 
       if (error) throw error;
-      setDonations(data || []);
+      if (data && data.length > 0) {
+        setDonations(data as Donation[]);
+      } else {
+        // Use demo data if no donations from database
+        setDonations(demoDonations as Donation[]);
+      }
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      // Fallback to demo data on error
+      setDonations(demoDonations as Donation[]);
+      console.error("Using demo data:", error);
     } finally {
       setLoading(false);
     }

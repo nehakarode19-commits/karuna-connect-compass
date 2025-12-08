@@ -12,6 +12,7 @@ import {
 import { Trophy, Medal, Award, Star, TrendingUp, School, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { demoLeaderboard, demoChapters } from "@/data/demoData";
 
 interface LeaderboardEntry {
   school_id: string;
@@ -46,10 +47,17 @@ const AdminLeaderboard = () => {
 
       if (error) throw error;
 
-      const uniqueChapters = [...new Set(data.map((s) => s.kendra_name))].filter(Boolean);
-      setChapters(uniqueChapters);
+      if (data && data.length > 0) {
+        const uniqueChapters = [...new Set(data.map((s) => s.kendra_name))].filter(Boolean);
+        setChapters(uniqueChapters);
+      } else {
+        // Use demo chapters if no data
+        setChapters(demoChapters);
+      }
     } catch (error) {
-      console.error("Error fetching chapters:", error);
+      // Fallback to demo chapters
+      setChapters(demoChapters);
+      console.error("Using demo chapters:", error);
     }
   };
 
@@ -101,51 +109,57 @@ const AdminLeaderboard = () => {
 
       if (error) throw error;
 
-      // Process data to calculate school scores
-      const schoolScores = new Map<string, LeaderboardEntry>();
+      if (data && data.length > 0) {
+        // Process data to calculate school scores
+        const schoolScores = new Map<string, LeaderboardEntry>();
 
-      data?.forEach((submission: any) => {
-        const schoolId = submission.school_id;
-        const existing = schoolScores.get(schoolId);
+        data.forEach((submission: any) => {
+          const schoolId = submission.school_id;
+          const existing = schoolScores.get(schoolId);
 
-        if (existing) {
-          existing.total_score += submission.score || 0;
-          existing.submissions_count += 1;
-          existing.approved_submissions += 1;
-        } else {
-          schoolScores.set(schoolId, {
-            school_id: schoolId,
-            school_name: submission.schools.school_name,
-            kc_no: submission.schools.kc_no,
-            kendra_name: submission.schools.kendra_name,
-            total_score: submission.score || 0,
-            submissions_count: 1,
-            average_score: 0,
-            approved_submissions: 1,
-          });
+          if (existing) {
+            existing.total_score += submission.score || 0;
+            existing.submissions_count += 1;
+            existing.approved_submissions += 1;
+          } else {
+            schoolScores.set(schoolId, {
+              school_id: schoolId,
+              school_name: submission.schools.school_name,
+              kc_no: submission.schools.kc_no,
+              kendra_name: submission.schools.kendra_name,
+              total_score: submission.score || 0,
+              submissions_count: 1,
+              average_score: 0,
+              approved_submissions: 1,
+            });
+          }
+        });
+
+        // Calculate average scores and filter by chapter
+        let leaderboardData = Array.from(schoolScores.values())
+          .map((entry) => ({
+            ...entry,
+            average_score: Math.round(entry.total_score / entry.submissions_count),
+          }))
+          .filter((entry) => {
+            if (chapterFilter === "all") return true;
+            return entry.kendra_name === chapterFilter;
+          })
+          .sort((a, b) => b.average_score - a.average_score);
+
+        setLeaderboard(leaderboardData);
+      } else {
+        // Use demo leaderboard if no data
+        let filteredLeaderboard = demoLeaderboard;
+        if (chapterFilter !== "all") {
+          filteredLeaderboard = demoLeaderboard.filter(e => e.kendra_name === chapterFilter);
         }
-      });
-
-      // Calculate average scores and filter by chapter
-      let leaderboardData = Array.from(schoolScores.values())
-        .map((entry) => ({
-          ...entry,
-          average_score: Math.round(entry.total_score / entry.submissions_count),
-        }))
-        .filter((entry) => {
-          if (chapterFilter === "all") return true;
-          return entry.kendra_name === chapterFilter;
-        })
-        .sort((a, b) => b.average_score - a.average_score);
-
-      setLeaderboard(leaderboardData);
+        setLeaderboard(filteredLeaderboard);
+      }
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Failed to load leaderboard data",
-        variant: "destructive",
-      });
-      console.error("Error fetching leaderboard:", error);
+      // Fallback to demo leaderboard
+      setLeaderboard(demoLeaderboard);
+      console.error("Using demo leaderboard:", error);
     } finally {
       setLoading(false);
     }
