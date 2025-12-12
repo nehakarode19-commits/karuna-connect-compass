@@ -1,216 +1,401 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "./AdminLayout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { Download, FileText, BarChart3, PieChart, TrendingUp, Calendar } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Search, Eye, Loader2, Trophy, Filter, Download, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { demoSubmissions, demoChapters } from "@/data/demoData";
+
+interface Submission {
+  id: string;
+  event_id: string;
+  school_id: string;
+  status: string;
+  score: number | null;
+  submitted_at: string | null;
+  created_at: string;
+  schools: {
+    school_name: string;
+    kc_no: string;
+    kendra_name: string;
+  };
+  events: {
+    title: string;
+  };
+  teachers: {
+    name: string;
+  } | null;
+}
 
 const AdminReports = () => {
+  const navigate = useNavigate();
   const { toast } = useToast();
-  const [reportType, setReportType] = useState("activity");
-  const [chapter, setChapter] = useState("all");
-  const [dateRange, setDateRange] = useState("this-month");
-  const [chapters, setChapters] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("approved");
+  const [chapterFilter, setChapterFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("all");
+  const [chapters, setChapters] = useState<string[]>([]);
 
   useEffect(() => {
+    fetchSubmissions();
     fetchChapters();
   }, []);
 
   const fetchChapters = async () => {
-    const { data } = await supabase.from("chapters").select("*").order("name");
-    if (data) setChapters(data);
-  };
+    try {
+      const { data, error } = await supabase
+        .from("chapters")
+        .select("name")
+        .order("name");
 
-  const handleGenerateReport = async () => {
-    toast({
-      title: "Generating Report",
-      description: "Your report is being prepared...",
-    });
-    // Add actual report generation logic here
-  };
-  const reportTypes = [
-    {
-      id: "activity",
-      title: "Activity Reports",
-      description: "Comprehensive reports on all school activities and submissions",
-      icon: FileText,
-      color: "text-blue-600 bg-blue-500/10"
-    },
-    {
-      id: "donation",
-      title: "Donation Reports",
-      description: "Financial reports with donation analytics and trends",
-      icon: TrendingUp,
-      color: "text-green-600 bg-green-500/10"
-    },
-    {
-      id: "exam",
-      title: "Exam Results",
-      description: "Student performance reports with rankings and certificates",
-      icon: BarChart3,
-      color: "text-purple-600 bg-purple-500/10"
-    },
-    {
-      id: "leaderboard",
-      title: "Leaderboards",
-      description: "School and student rankings across all activities",
-      icon: PieChart,
-      color: "text-orange-600 bg-orange-500/10"
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        setChapters(data.map((c) => c.name));
+      } else {
+        setChapters(demoChapters);
+      }
+    } catch (error) {
+      setChapters(demoChapters);
     }
-  ];
+  };
 
-  const recentReports = [
-    { name: "Monthly Activity Summary - August 2024", date: "Sep 1, 2024", type: "Activity" },
-    { name: "Donation Report Q2 2024", date: "Aug 28, 2024", type: "Donation" },
-    { name: "Exam Results - Independence Day Quiz", date: "Aug 20, 2024", type: "Exam" },
-    { name: "School Rankings - July 2024", date: "Aug 5, 2024", type: "Leaderboard" },
-    { name: "Annual Report 2023-24", date: "Jul 15, 2024", type: "Comprehensive" }
-  ];
+  const fetchSubmissions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("event_submissions")
+        .select(`
+          *,
+          schools (
+            school_name,
+            kc_no,
+            kendra_name
+          ),
+          events (
+            title
+          ),
+          teachers (
+            name
+          )
+        `)
+        .order("score", { ascending: false });
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        setSubmissions(data as Submission[]);
+      } else {
+        setSubmissions(demoSubmissions as Submission[]);
+      }
+    } catch (error: any) {
+      setSubmissions(demoSubmissions as Submission[]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getDateFilterRange = () => {
+    const now = new Date();
+    switch (dateFilter) {
+      case "today":
+        return new Date(now.setHours(0, 0, 0, 0));
+      case "week":
+        return new Date(now.setDate(now.getDate() - 7));
+      case "month":
+        return new Date(now.setMonth(now.getMonth() - 1));
+      case "quarter":
+        return new Date(now.setMonth(now.getMonth() - 3));
+      default:
+        return null;
+    }
+  };
+
+  const rankedSubmissions = submissions
+    .filter((submission) => {
+      const matchesSearch =
+        submission.schools.school_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        submission.schools.kc_no.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        submission.events.title.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesStatus = statusFilter === "all" || submission.status === statusFilter;
+      
+      const matchesChapter = chapterFilter === "all" || 
+        submission.schools.kendra_name.toLowerCase().includes(chapterFilter.toLowerCase());
+
+      const dateRange = getDateFilterRange();
+      const submissionDate = new Date(submission.submitted_at || submission.created_at);
+      const matchesDate = !dateRange || submissionDate >= dateRange;
+
+      return matchesSearch && matchesStatus && matchesChapter && matchesDate;
+    })
+    .sort((a, b) => (b.score || 0) - (a.score || 0))
+    .map((submission, index) => ({
+      ...submission,
+      rank: index + 1,
+    }));
+
+  const getStatusBadge = (status: string) => {
+    const statusConfig = {
+      pending: { color: "bg-yellow-500", label: "Pending" },
+      approved: { color: "bg-green-500", label: "Approved" },
+      rejected: { color: "bg-red-500", label: "Rejected" },
+      revision_requested: { color: "bg-blue-500", label: "Revision Requested" },
+    };
+
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
+
+    return (
+      <Badge className={`${config.color} text-white`}>
+        {config.label}
+      </Badge>
+    );
+  };
+
+  const handleExport = () => {
+    toast({
+      title: "Exporting Report",
+      description: "Your submission ranking report is being generated...",
+    });
+  };
+
+  const getStats = () => {
+    const approved = submissions.filter(s => s.status === "approved");
+    const avgScore = approved.length > 0 
+      ? Math.round(approved.reduce((sum, s) => sum + (s.score || 0), 0) / approved.length) 
+      : 0;
+    return {
+      total: submissions.length,
+      approved: approved.length,
+      avgScore,
+      topScore: approved.length > 0 ? Math.max(...approved.map(s => s.score || 0)) : 0,
+    };
+  };
+
+  const stats = getStats();
 
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Reports & Analytics</h1>
-          <p className="text-muted-foreground mt-1">
-            Generate comprehensive reports and export data
-          </p>
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Submission Rankings Report</h1>
+            <p className="text-muted-foreground">
+              View school submissions ranked by score
+            </p>
+          </div>
+          <Button onClick={handleExport} variant="outline">
+            <Download className="w-4 h-4 mr-2" />
+            Export Report
+          </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {reportTypes.map((report) => (
-            <Card key={report.id} className="hover:shadow-lg transition-all cursor-pointer group">
-              <CardContent className="p-6">
-                <div className={`w-12 h-12 rounded-lg ${report.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-                  <report.icon className={`w-6 h-6 ${report.color.split(' ')[0]}`} />
-                </div>
-                <h3 className="font-semibold text-lg mb-2">{report.title}</h3>
-                <p className="text-sm text-muted-foreground">{report.description}</p>
-              </CardContent>
-            </Card>
-          ))}
+        {/* Stats Cards */}
+        <div className="grid gap-4 md:grid-cols-4">
+          <Card>
+            <CardContent className="p-6">
+              <div className="text-2xl font-bold">{stats.total}</div>
+              <div className="text-sm text-muted-foreground">Total Submissions</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-6">
+              <div className="text-2xl font-bold text-green-600">{stats.approved}</div>
+              <div className="text-sm text-muted-foreground">Approved</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-6">
+              <div className="text-2xl font-bold text-primary">{stats.avgScore}</div>
+              <div className="text-sm text-muted-foreground">Average Score</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-6">
+              <div className="text-2xl font-bold text-yellow-600">{stats.topScore}</div>
+              <div className="text-sm text-muted-foreground">Top Score</div>
+            </CardContent>
+          </Card>
         </div>
 
-        <Card className="border-2">
-          <CardHeader className="border-b bg-muted/20">
-            <CardTitle>Generate New Report</CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="space-y-2">
-                <Label>Report Type</Label>
-                <Select value={reportType} onValueChange={setReportType}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="activity">Activity Report</SelectItem>
-                    <SelectItem value="donation">Donation Report</SelectItem>
-                    <SelectItem value="exam">Exam Results</SelectItem>
-                    <SelectItem value="leaderboard">Leaderboard</SelectItem>
-                    <SelectItem value="comprehensive">Comprehensive</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Chapter</Label>
-                <Select value={chapter} onValueChange={setChapter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select chapter" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Chapters</SelectItem>
-                    {chapters.map((ch) => (
-                      <SelectItem key={ch.id} value={ch.id}>{ch.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Date Range</Label>
-                <Select value={dateRange} onValueChange={setDateRange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select range" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="this-month">This Month</SelectItem>
-                    <SelectItem value="last-month">Last Month</SelectItem>
-                    <SelectItem value="this-quarter">This Quarter</SelectItem>
-                    <SelectItem value="this-year">This Year</SelectItem>
-                    <SelectItem value="custom">Custom Range</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Format</Label>
-                <Select defaultValue="pdf">
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pdf">PDF</SelectItem>
-                    <SelectItem value="excel">Excel</SelectItem>
-                    <SelectItem value="csv">CSV</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+        {/* Advanced Filters */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Filter className="w-4 h-4 text-muted-foreground" />
+              <span className="font-medium">Filters</span>
             </div>
+            <div className="grid gap-4 md:grid-cols-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <Input
+                  placeholder="Search school, KC no, event..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
 
-            <div className="flex justify-end gap-3 mt-6">
-              <Button variant="outline" className="gap-2">
-                <BarChart3 className="w-4 h-4" />
-                Preview
-              </Button>
-              <Button onClick={handleGenerateReport} className="gap-2 bg-gradient-hero border-0 shadow-lg">
-                <Download className="w-4 h-4" />
-                Generate Report
-              </Button>
+              <Select value={chapterFilter} onValueChange={setChapterFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Chapter" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Chapters</SelectItem>
+                  {chapters.map((chapter) => (
+                    <SelectItem key={chapter} value={chapter}>
+                      {chapter}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={dateFilter} onValueChange={setDateFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Date Range" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Time</SelectItem>
+                  <SelectItem value="today">Today</SelectItem>
+                  <SelectItem value="week">Last 7 Days</SelectItem>
+                  <SelectItem value="month">Last 30 Days</SelectItem>
+                  <SelectItem value="quarter">Last 3 Months</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-2">
-          <CardHeader className="flex flex-row items-center justify-between border-b bg-muted/20">
-            <CardTitle>Recent Reports</CardTitle>
-            <Button variant="outline" size="sm" className="gap-2">
-              <Calendar className="w-4 h-4" />
-              View All
-            </Button>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="divide-y">
-              {recentReports.map((report, index) => (
-                <div key={index} className="p-4 hover:bg-muted/30 transition-colors flex items-center justify-between group">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <FileText className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <div className="font-medium group-hover:text-primary transition-colors">
-                        {report.name}
+        {/* Rankings Table */}
+        {loading ? (
+          <div className="flex items-center justify-center h-64">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        ) : rankedSubmissions.length > 0 ? (
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-16">
+                      <div className="flex items-center gap-1">
+                        <Trophy className="w-4 h-4" />
+                        Rank
                       </div>
-                      <div className="text-sm text-muted-foreground flex items-center gap-3">
-                        <span>{report.date}</span>
-                        <span>•</span>
-                        <span className="text-primary">{report.type}</span>
+                    </TableHead>
+                    <TableHead>School</TableHead>
+                    <TableHead>Activity</TableHead>
+                    <TableHead>Chapter</TableHead>
+                    <TableHead>
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-4 h-4" />
+                        Date
                       </div>
-                    </div>
-                  </div>
-                  <Button size="sm" variant="ghost" className="gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Download className="w-4 h-4" />
-                    Download
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                    </TableHead>
+                    <TableHead>Score</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rankedSubmissions.map((submission) => (
+                    <TableRow key={submission.id}>
+                      <TableCell>
+                        <div className="flex items-center justify-center">
+                          {submission.rank <= 3 ? (
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-white ${
+                              submission.rank === 1 ? "bg-yellow-500" :
+                              submission.rank === 2 ? "bg-gray-400" :
+                              "bg-amber-700"
+                            }`}>
+                              {submission.rank}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground font-medium">
+                              #{submission.rank}
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{submission.schools.school_name}</div>
+                          <div className="text-sm text-muted-foreground">{submission.schools.kc_no}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{submission.events.title}</TableCell>
+                      <TableCell>{submission.schools.kendra_name}</TableCell>
+                      <TableCell>
+                        {new Date(submission.submitted_at || submission.created_at).toLocaleDateString('en-IN')}
+                      </TableCell>
+                      <TableCell>
+                        {submission.score !== null ? (
+                          <span className="font-bold text-primary">{submission.score}/100</span>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>{getStatusBadge(submission.status)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          onClick={() => navigate(`/admin/submissions/${submission.id}`)}
+                          size="sm"
+                          variant="outline"
+                        >
+                          <Eye className="w-4 h-4 mr-1" />
+                          View
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <Trophy className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="text-lg font-semibold mb-2">No Submissions Found</h3>
+              <p className="text-muted-foreground">
+                Try adjusting your filters to see ranked submissions
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </AdminLayout>
   );
