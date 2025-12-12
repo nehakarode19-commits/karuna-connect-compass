@@ -7,8 +7,6 @@ import {
   Calendar,
   Heart,
   FileText,
-  Settings,
-  CheckSquare,
   Trophy,
   Award,
 } from "lucide-react";
@@ -28,14 +26,12 @@ import {
 const menuItems = [
   { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
   { title: "Schools", url: "/admin/schools", icon: School },
-  { title: "Submissions", url: "/admin/submissions", icon: FileText },
-  { title: "Leaderboard", url: "/admin/leaderboard", icon: Trophy },
   { title: "Activity", url: "/admin/activity", icon: Calendar },
+  { title: "Submissions", url: "/admin/submissions", icon: FileText },
+  { title: "School Rankings", url: "/admin/leaderboard", icon: Trophy },
   { title: "Students", url: "/admin/students", icon: Users },
   { title: "Donations", url: "/admin/donations", icon: Heart },
-  { title: "Reports", url: "/admin/reports", icon: FileText },
   { title: "Certificates", url: "/admin/certificates", icon: Award },
-  { title: "Settings", url: "/admin/settings", icon: Settings },
 ];
 
 export function AdminSidebar() {

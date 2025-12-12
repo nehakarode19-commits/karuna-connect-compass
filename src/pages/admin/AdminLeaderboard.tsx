@@ -206,10 +206,10 @@ const AdminLeaderboard = () => {
         <div>
           <h1 className="text-3xl font-bold mb-2 flex items-center gap-3">
             <Trophy className="w-8 h-8 text-yellow-500" />
-            School Leaderboard
+            School Rankings
           </h1>
           <p className="text-muted-foreground">
-            Top-performing schools based on activity submission scores
+            Schools ranked by average submission scores - aggregated performance view
           </p>
         </div>
 
