@@ -12,18 +12,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Search, Eye, Loader2, FileText, Trophy, ArrowUpDown, Filter, Download, Calendar } from "lucide-react";
+import { Search, Eye, Calendar, School, Loader2, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { demoSubmissions, demoChapters } from "@/data/demoData";
+import { demoSubmissions } from "@/data/demoData";
 
 interface Submission {
   id: string;
@@ -53,35 +45,10 @@ const AdminSubmissions = () => {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [chapterFilter, setChapterFilter] = useState("all");
-  const [dateFilter, setDateFilter] = useState("all");
-  const [sortBy, setSortBy] = useState<"rank" | "date" | "score">("rank");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-  const [chapters, setChapters] = useState<string[]>([]);
 
   useEffect(() => {
     fetchSubmissions();
-    fetchChapters();
   }, []);
-
-  const fetchChapters = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("chapters")
-        .select("name")
-        .order("name");
-
-      if (error) throw error;
-
-      if (data && data.length > 0) {
-        setChapters(data.map((c) => c.name));
-      } else {
-        setChapters(demoChapters);
-      }
-    } catch (error) {
-      setChapters(demoChapters);
-    }
-  };
 
   const fetchSubmissions = async () => {
     try {
@@ -108,9 +75,11 @@ const AdminSubmissions = () => {
       if (data && data.length > 0) {
         setSubmissions(data as Submission[]);
       } else {
+        // Use demo data if no submissions from database
         setSubmissions(demoSubmissions as Submission[]);
       }
     } catch (error: any) {
+      // Fallback to demo data on error
       setSubmissions(demoSubmissions as Submission[]);
       console.error("Using demo data:", error);
     } finally {
@@ -118,73 +87,15 @@ const AdminSubmissions = () => {
     }
   };
 
-  const getDateFilterRange = () => {
-    const now = new Date();
-    switch (dateFilter) {
-      case "today":
-        return new Date(now.setHours(0, 0, 0, 0));
-      case "week":
-        return new Date(now.setDate(now.getDate() - 7));
-      case "month":
-        return new Date(now.setMonth(now.getMonth() - 1));
-      case "quarter":
-        return new Date(now.setMonth(now.getMonth() - 3));
-      default:
-        return null;
-    }
-  };
+  const filteredSubmissions = submissions.filter((submission) => {
+    const matchesSearch =
+      submission.schools.school_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      submission.schools.kc_no.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      submission.events.title.toLowerCase().includes(searchTerm.toLowerCase());
 
-  const filteredAndSortedSubmissions = submissions
-    .filter((submission) => {
-      const matchesSearch =
-        submission.schools.school_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        submission.schools.kc_no.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        submission.events.title.toLowerCase().includes(searchTerm.toLowerCase());
-
-      const matchesStatus = statusFilter === "all" || submission.status === statusFilter;
-      
-      const matchesChapter = chapterFilter === "all" || 
-        submission.schools.kendra_name.toLowerCase().includes(chapterFilter.toLowerCase());
-
-      const dateRange = getDateFilterRange();
-      const submissionDate = new Date(submission.submitted_at || submission.created_at);
-      const matchesDate = !dateRange || submissionDate >= dateRange;
-
-      return matchesSearch && matchesStatus && matchesChapter && matchesDate;
-    })
-    .sort((a, b) => {
-      let comparison = 0;
-      
-      switch (sortBy) {
-        case "score":
-          comparison = (a.score || 0) - (b.score || 0);
-          break;
-        case "date":
-          comparison = new Date(a.submitted_at || a.created_at).getTime() - 
-                      new Date(b.submitted_at || b.created_at).getTime();
-          break;
-        case "rank":
-        default:
-          // Approved with highest score first, then pending, then rejected
-          const statusOrder = { approved: 0, pending: 1, revision_requested: 2, rejected: 3 };
-          const statusA = statusOrder[a.status as keyof typeof statusOrder] ?? 4;
-          const statusB = statusOrder[b.status as keyof typeof statusOrder] ?? 4;
-          if (statusA !== statusB) {
-            comparison = statusA - statusB;
-          } else {
-            comparison = (b.score || 0) - (a.score || 0);
-          }
-          break;
-      }
-      
-      return sortOrder === "desc" ? -comparison : comparison;
-    });
-
-  // Add rank to sorted submissions
-  const rankedSubmissions = filteredAndSortedSubmissions.map((submission, index) => ({
-    ...submission,
-    rank: index + 1,
-  }));
+    if (statusFilter === "all") return matchesSearch;
+    return matchesSearch && submission.status === statusFilter;
+  });
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
@@ -212,34 +123,17 @@ const AdminSubmissions = () => {
     };
   };
 
-  const handleExport = () => {
-    toast({
-      title: "Exporting Report",
-      description: "Your submission report is being generated...",
-    });
-  };
-
-  const toggleSortOrder = () => {
-    setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-  };
-
   const stats = getSubmissionStats();
 
   return (
     <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Submission Reports</h1>
-            <p className="text-muted-foreground">
-              View and analyze school activity submissions with rankings
-            </p>
-          </div>
-          <Button onClick={handleExport} variant="outline">
-            <Download className="w-4 h-4 mr-2" />
-            Export Report
-          </Button>
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Activity Submissions</h1>
+          <p className="text-muted-foreground">
+            Review and manage school activity submissions
+          </p>
         </div>
 
         {/* Stats Cards */}
@@ -270,177 +164,91 @@ const AdminSubmissions = () => {
           </Card>
         </div>
 
-        {/* Advanced Filters */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Filter className="w-4 h-4 text-muted-foreground" />
-              <span className="font-medium">Advanced Filters</span>
-            </div>
-            <div className="grid gap-4 md:grid-cols-5">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                <Input
-                  placeholder="Search school, KC no, event..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-              
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
-                  <SelectItem value="revision_requested">Revision Requested</SelectItem>
-                </SelectContent>
-              </Select>
+        {/* Filters */}
+        <div className="flex gap-4 flex-wrap">
+          <div className="relative flex-1 min-w-[300px]">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+            <Input
+              placeholder="Search by school name, KC no, or event..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Submissions</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="approved">Approved</SelectItem>
+              <SelectItem value="rejected">Rejected</SelectItem>
+              <SelectItem value="revision_requested">Revision Requested</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-              <Select value={chapterFilter} onValueChange={setChapterFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Chapter" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Chapters</SelectItem>
-                  {chapters.map((chapter) => (
-                    <SelectItem key={chapter} value={chapter}>
-                      {chapter}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={dateFilter} onValueChange={setDateFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Date Range" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Time</SelectItem>
-                  <SelectItem value="today">Today</SelectItem>
-                  <SelectItem value="week">Last 7 Days</SelectItem>
-                  <SelectItem value="month">Last 30 Days</SelectItem>
-                  <SelectItem value="quarter">Last 3 Months</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={sortBy} onValueChange={(v) => setSortBy(v as "rank" | "date" | "score")}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sort By" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="rank">Rank (Score + Status)</SelectItem>
-                  <SelectItem value="score">Score Only</SelectItem>
-                  <SelectItem value="date">Submission Date</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Submissions Table with Ranking */}
+        {/* Submissions List */}
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
-        ) : rankedSubmissions.length > 0 ? (
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-16">
-                      <div className="flex items-center gap-1">
-                        <Trophy className="w-4 h-4" />
-                        Rank
+        ) : filteredSubmissions.length > 0 ? (
+          <div className="grid gap-4">
+            {filteredSubmissions.map((submission) => (
+              <Card key={submission.id} className="hover:shadow-md transition-shadow">
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 space-y-3">
+                      <div className="flex items-center gap-3">
+                        <FileText className="w-5 h-5 text-primary" />
+                        <h3 className="text-lg font-semibold">{submission.events.title}</h3>
+                        {getStatusBadge(submission.status)}
                       </div>
-                    </TableHead>
-                    <TableHead>School</TableHead>
-                    <TableHead>Activity</TableHead>
-                    <TableHead>Chapter</TableHead>
-                    <TableHead>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-8 p-0"
-                        onClick={toggleSortOrder}
-                      >
-                        <Calendar className="w-4 h-4 mr-1" />
-                        Date
-                        <ArrowUpDown className="w-3 h-3 ml-1" />
-                      </Button>
-                    </TableHead>
-                    <TableHead>Score</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {rankedSubmissions.map((submission) => (
-                    <TableRow key={submission.id}>
-                      <TableCell>
-                        <div className="flex items-center justify-center">
-                          {submission.rank <= 3 ? (
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-white ${
-                              submission.rank === 1 ? "bg-yellow-500" :
-                              submission.rank === 2 ? "bg-gray-400" :
-                              "bg-amber-700"
-                            }`}>
-                              {submission.rank}
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground font-medium">
-                              #{submission.rank}
-                            </span>
-                          )}
+
+                      <div className="grid gap-2 md:grid-cols-2 text-sm">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <School className="w-4 h-4" />
+                          <span>
+                            {submission.schools.school_name} ({submission.schools.kc_no})
+                          </span>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{submission.schools.school_name}</div>
-                          <div className="text-sm text-muted-foreground">{submission.schools.kc_no}</div>
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Calendar className="w-4 h-4" />
+                          <span>
+                            Submitted: {new Date(submission.submitted_at || submission.created_at).toLocaleDateString('en-IN')}
+                          </span>
                         </div>
-                      </TableCell>
-                      <TableCell>{submission.events.title}</TableCell>
-                      <TableCell>{submission.schools.kendra_name}</TableCell>
-                      <TableCell>
-                        {new Date(submission.submitted_at || submission.created_at).toLocaleDateString('en-IN')}
-                      </TableCell>
-                      <TableCell>
-                        {submission.score !== null ? (
-                          <span className="font-bold text-primary">{submission.score}/100</span>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>{getStatusBadge(submission.status)}</TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          onClick={() => navigate(`/admin/submissions/${submission.id}`)}
-                          size="sm"
-                          variant="outline"
-                        >
-                          <Eye className="w-4 h-4 mr-1" />
-                          View
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                      </div>
+
+                      {submission.score !== null && (
+                        <div className="text-sm">
+                          <span className="font-semibold">Score: </span>
+                          <span className="text-primary font-bold">{submission.score}/100</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <Button
+                      onClick={() => navigate(`/admin/submissions/${submission.id}`)}
+                      size="sm"
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      Review
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         ) : (
           <Card>
             <CardContent className="p-12 text-center">
               <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
               <h3 className="text-lg font-semibold mb-2">No Submissions Found</h3>
               <p className="text-muted-foreground">
-                {searchTerm || statusFilter !== "all" || chapterFilter !== "all" || dateFilter !== "all"
+                {searchTerm || statusFilter !== "all"
                   ? "Try adjusting your filters"
                   : "No submissions have been received yet"}
               </p>
