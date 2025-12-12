@@ -28,6 +28,7 @@ const menuItems = [
   { title: "Schools", url: "/admin/schools", icon: School },
   { title: "Activity", url: "/admin/activity", icon: Calendar },
   { title: "Submissions", url: "/admin/submissions", icon: FileText },
+  { title: "Submission Reports", url: "/admin/reports", icon: FileText },
   { title: "School Rankings", url: "/admin/leaderboard", icon: Trophy },
   { title: "Students", url: "/admin/students", icon: Users },
   { title: "Donations", url: "/admin/donations", icon: Heart },
